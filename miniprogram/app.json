@@ -48,11 +48,6 @@
       "desc": "你的相册将用于选择学习图片和视频"
     }
   },
-  "requiredPrivateInfos": [
-    "chooseImage",
-    "chooseVideo",
-    "chooseMedia"
-  ],
   "sitemapLocation": "sitemap.json",
   "style": "v2",
   "lazyCodeLoading": "requiredComponents"
