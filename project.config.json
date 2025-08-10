@@ -44,8 +44,8 @@
     "swc": false,
     "disableSWC": true
   },
-  "appid": "wxc9d9d128c26552ef",
-  "projectname": "quickstart-wx-cloud",
+  "appid": "请替换为您的小程序AppID",
+  "projectname": "Learning Tracker - 学习打卡小程序",
   "libVersion": "2.20.1",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
   "condition": {
@@ -64,9 +64,19 @@
     "miniprogram": {
       "list": [
         {
-          "id": -1,
-          "name": "db guide",
-          "pathName": "pages/databaseGuide/databaseGuide"
+          "id": 0,
+          "name": "今日打卡",
+          "pathName": "pages/checkin/checkin"
+        },
+        {
+          "id": 1,
+          "name": "打卡记录",
+          "pathName": "pages/history/history"
+        },
+        {
+          "id": 2,
+          "name": "我的",
+          "pathName": "pages/profile/profile"
         }
       ]
     }
