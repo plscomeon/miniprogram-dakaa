@@ -139,85 +139,56 @@ Page({
     this.setData({ questions })
   },
 
-  // 视频上传相关方法（与图片上传保持完全一致的逻辑）
+  // 视频上传相关方法（完全采用与图片上传一致的简单逻辑）
   chooseVideo() {
-    // 检查是否支持chooseMedia（新版API）
-    if (wx.chooseMedia) {
-      wx.chooseMedia({
-        count: 1,
-        mediaType: ['video'],
-        sourceType: ['album', 'camera'],
-        maxDuration: 300, // 5分钟
-        success: (res) => {
-          const media = res.tempFiles[0]
-          
-          // 检查视频大小（限制50MB）
-          if (media.size > 50 * 1024 * 1024) {
-            wx.showToast({
-              title: '视频文件过大，请选择小于50MB的视频',
-              icon: 'none',
-              duration: 2000
-            })
-            return
-          }
-          
-          this.uploadVideo(media.tempFilePath, media.thumbTempFilePath)
-        },
-        fail: (err) => {
-          console.log('选择视频失败:', err)
+    // 直接使用chooseVideo API，简单可靠
+    wx.chooseVideo({
+      sourceType: ['album', 'camera'],
+      maxDuration: 300, // 5分钟
+      success: (res) => {
+        console.log('选择视频成功:', res)
+        
+        // 检查视频大小（限制50MB）
+        if (res.size && res.size > 50 * 1024 * 1024) {
           wx.showToast({
-            title: '选择视频失败',
-            icon: 'none'
+            title: '视频文件过大，请选择小于50MB的视频',
+            icon: 'none',
+            duration: 2000
           })
+          return
         }
-      })
-    } else {
-      // 降级使用chooseVideo
-      wx.chooseVideo({
-        sourceType: ['album', 'camera'],
-        maxDuration: 300, // 5分钟
-        success: (res) => {
-          // 检查视频大小（限制50MB）
-          if (res.size > 50 * 1024 * 1024) {
-            wx.showToast({
-              title: '视频文件过大，请选择小于50MB的视频',
-              icon: 'none',
-              duration: 2000
-            })
-            return
-          }
-          
-          this.uploadVideo(res.tempFilePath, res.thumbTempFilePath)
-        },
-        fail: (err) => {
-          console.log('选择视频失败:', err)
+        
+        // 检查视频时长（限制5分钟）
+        if (res.duration && res.duration > 300) {
           wx.showToast({
-            title: '选择视频失败',
-            icon: 'none'
+            title: '视频时长过长，请选择5分钟内的视频',
+            icon: 'none',
+            duration: 2000
           })
+          return
         }
-      })
-    }
-  },
-
-  uploadVideo(filePath, thumbPath) {
-    wx.showLoading({ title: '处理视频中...' })
-    
-    // 直接使用本地临时路径（与图片上传保持一致的逻辑）
-    setTimeout(() => {
-      this.setData({
-        videoInfo: {
-          url: filePath,
-          cover: thumbPath || filePath
-        }
-      })
-      
-      wx.hideLoading()
-      wx.showToast({
-        title: '视频添加成功',
-        icon: 'success'
-      })
-    }, 1000)
+        
+        // 直接保存视频信息（与图片上传完全一致的逻辑）
+        this.setData({
+          videoInfo: {
+            url: res.tempFilePath,
+            cover: res.thumbTempFilePath || res.tempFilePath
+          }
+        })
+        
+        wx.showToast({
+          title: '视频添加成功',
+          icon: 'success'
+        })
+      },
+      fail: (err) => {
+        console.error('选择视频失败:', err)
+        wx.showToast({
+          title: '选择视频失败，请重试',
+          icon: 'none'
+        })
+      }
+    })
   },
 
   deleteVideo() {
