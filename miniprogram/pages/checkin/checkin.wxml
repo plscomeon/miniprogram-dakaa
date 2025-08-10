@@ -1,98 +1,134 @@
 <!--pages/checkin/checkin.wxml-->
 <view class="page-container">
   <view class="content-container">
-  <!-- 顶部状态 -->
-  <view class="status-bar">
-    <view class="date-info">
-      <text class="date">{{currentDate}}</text>
-      <text class="day">{{currentDay}}</text>
-    </view>
-    <view class="streak-info">
-      <text class="streak-number">{{streakDays}}</text>
-      <text class="streak-text">连续天数</text>
-    </view>
-  </view>
-
-  <!-- 打卡模块 -->
-  <view class="checkin-modules">
-    <!-- 预习提问 -->
-    <view class="module-card {{previewCompleted ? 'completed' : ''}}">
-      <view class="module-header">
-        <view class="module-icon">📚</view>
-        <view class="module-title">预习提问</view>
-        <view class="module-status">
-          <text wx:if="{{previewCompleted}}" class="status-completed">已完成</text>
-          <text wx:else class="status-pending">待完成</text>
-        </view>
+    <!-- 顶部状态栏 -->
+    <view class="status-bar">
+      <view class="user-info" bindtap="onAvatarTap">
+        <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+        <text class="username">{{userInfo.nickName || '未登录'}}</text>
       </view>
-      <view class="module-content" wx:if="{{!previewCompleted}}">
-        <textarea 
-          class="input-area" 
-          placeholder="请输入今天的预习问题..."
-          value="{{previewQuestion}}"
-          bindinput="onPreviewInput"
-          maxlength="500">
-        </textarea>
-        <button class="btn btn-primary" bindtap="submitPreview">提交预习</button>
-      </view>
-      <view class="module-result" wx:else>
-        <text class="result-text">{{previewQuestion}}</text>
+      <view class="date-info">
+        <text class="date">{{currentDate}}</text>
       </view>
     </view>
 
-    <!-- 视频上传 -->
-    <view class="module-card {{videoCompleted ? 'completed' : ''}}">
-      <view class="module-header">
-        <view class="module-icon">🎥</view>
-        <view class="module-title">视频上传</view>
-        <view class="module-status">
-          <text wx:if="{{videoCompleted}}" class="status-completed">已完成</text>
-          <text wx:else class="status-pending">待完成</text>
+    <!-- 用户菜单 -->
+    <view class="user-menu" wx:if="{{showUserMenu}}" bindtap="hideUserMenu">
+      <view class="menu-content" catchtap="">
+        <view class="menu-item" bindtap="goToProfile">
+          <text>个人中心</text>
         </view>
-      </view>
-      <view class="module-content" wx:if="{{!videoCompleted}}">
-        <view class="upload-area" bindtap="chooseVideo">
-          <view class="upload-icon">📹</view>
-          <text class="upload-text">点击上传学习视频</text>
+        <view class="menu-item" bindtap="logout">
+          <text>退出登录</text>
         </view>
-        <button class="btn btn-primary" bindtap="submitVideo" disabled="{{!videoPath}}">提交视频</button>
-      </view>
-      <view class="module-result" wx:else>
-        <video class="result-video" src="{{videoPath}}" controls></video>
       </view>
     </view>
 
-    <!-- 学习日记 -->
-    <view class="module-card {{diaryCompleted ? 'completed' : ''}}">
-      <view class="module-header">
-        <view class="module-icon">📝</view>
-        <view class="module-title">学习日记</view>
-        <view class="module-status">
-          <text wx:if="{{diaryCompleted}}" class="status-completed">已完成</text>
-          <text wx:else class="status-pending">待完成</text>
+    <!-- 打卡模块 -->
+    <view class="checkin-modules">
+      <!-- 预习提问模块 -->
+      <view class="module-card">
+        <view class="module-header">
+          <view class="module-icon">📚</view>
+          <view class="module-title">预习提问</view>
+        </view>
+        <view class="module-content">
+          <view class="questions-list">
+            <view class="question-item" wx:for="{{questions}}" wx:key="index">
+              <textarea 
+                class="question-input" 
+                placeholder="请输入预习问题..."
+                value="{{item}}"
+                data-index="{{index}}"
+                bindinput="onQuestionInput"
+                maxlength="200">
+              </textarea>
+              <view class="question-actions" wx:if="{{questions.length > 1}}">
+                <button class="btn-delete" data-index="{{index}}" bindtap="deleteQuestion">删除</button>
+              </view>
+            </view>
+          </view>
+          <view class="module-actions">
+            <button class="btn btn-secondary" bindtap="addQuestion" wx:if="{{questions.length < 5}}">
+              添加问题
+            </button>
+          </view>
         </view>
       </view>
-      <view class="module-content" wx:if="{{!diaryCompleted}}">
-        <textarea 
-          class="input-area" 
-          placeholder="记录今天的学习心得..."
-          value="{{diaryContent}}"
-          bindinput="onDiaryInput"
-          maxlength="1000">
-        </textarea>
-        <button class="btn btn-primary" bindtap="submitDiary">提交日记</button>
+
+      <!-- 视频上传模块 -->
+      <view class="module-card">
+        <view class="module-header">
+          <view class="module-icon">🎥</view>
+          <view class="module-title">错题讲解视频</view>
+        </view>
+        <view class="module-content">
+          <view class="video-upload" wx:if="{{!videoInfo.url}}">
+            <view class="upload-area" bindtap="chooseVideo">
+              <view class="upload-icon">📹</view>
+              <text class="upload-text">点击上传讲解视频</text>
+              <text class="upload-hint">支持5分钟内视频</text>
+            </view>
+          </view>
+          <view class="video-preview" wx:else>
+            <video class="preview-video" src="{{videoInfo.url}}" poster="{{videoInfo.cover}}" controls></video>
+            <button class="btn btn-delete" bindtap="deleteVideo">删除视频</button>
+          </view>
+          <view class="upload-progress" wx:if="{{uploadProgress > 0}}">
+            <view class="progress-bar">
+              <view class="progress-fill" style="width: {{uploadProgress}}%"></view>
+            </view>
+            <text class="progress-text">{{uploadProgress}}%</text>
+          </view>
+        </view>
       </view>
-      <view class="module-result" wx:else>
-        <text class="result-text">{{diaryContent}}</text>
+
+      <!-- 学习日记模块 -->
+      <view class="module-card">
+        <view class="module-header">
+          <view class="module-icon">📝</view>
+          <view class="module-title">学习日记</view>
+        </view>
+        <view class="module-content">
+          <textarea 
+            class="diary-input" 
+            placeholder="记录今天的学习心得和收获..."
+            value="{{diary}}"
+            bindinput="onDiaryInput"
+            maxlength="1000">
+          </textarea>
+          <view class="char-count">{{diary.length}}/1000</view>
+          
+          <!-- 图片上传 -->
+          <view class="images-section">
+            <view class="images-grid">
+              <view class="image-item" wx:for="{{images}}" wx:key="index">
+                <image class="diary-image" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindtap="previewImage"></image>
+                <view class="image-delete" data-index="{{index}}" bindtap="deleteImage">×</view>
+              </view>
+              <view class="image-add" bindtap="chooseImages" wx:if="{{images.length < 9}}">
+                <text class="add-icon">+</text>
+                <text class="add-text">添加图片</text>
+              </view>
+            </view>
+          </view>
+        </view>
       </view>
     </view>
-  </view>
 
-  <!-- 完成总结 -->
-  <view class="summary-card" wx:if="{{allCompleted}}">
-    <view class="summary-icon">🎉</view>
-    <view class="summary-title">今日打卡完成！</view>
-    <view class="summary-text">坚持学习，每天进步一点点</view>
-  </view>
+    <!-- 提交按钮 -->
+    <view class="submit-section">
+      <button class="btn btn-primary btn-submit" bindtap="submitCheckin" disabled="{{submitting}}">
+        {{submitting ? '提交中...' : '提交今日打卡'}}
+      </button>
+    </view>
+
+    <!-- 成功提示 -->
+    <view class="success-toast" wx:if="{{showSuccessToast}}">
+      <view class="toast-content">
+        <view class="toast-icon">✅</view>
+        <text class="toast-text">打卡成功！</text>
+      </view>
+    </view>
   </view>
 </view>

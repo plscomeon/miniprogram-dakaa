@@ -1,5 +1,5 @@
 // 今日打卡页面逻辑
-const app = getApp()
+const Storage = require('../../utils/storage.js')
 
 Page({
   data: {
@@ -24,6 +24,7 @@ Page({
 
   onShow() {
     this.loadDraft()
+    this.checkTodayRecord()
   },
 
   onHide() {
@@ -47,8 +48,45 @@ Page({
 
   // 获取用户信息
   getUserInfo() {
-    const userInfo = wx.getStorageSync('userInfo') || {}
+    const userInfo = Storage.getUserInfo()
     this.setData({ userInfo })
+    
+    // 如果没有用户信息，尝试获取微信用户信息
+    if (!userInfo.nickName || userInfo.nickName === '学习者') {
+      this.getWechatUserInfo()
+    }
+  },
+
+  // 获取微信用户信息
+  getWechatUserInfo() {
+    wx.getUserProfile({
+      desc: '用于显示用户信息',
+      success: (res) => {
+        const userInfo = res.userInfo
+        Storage.saveUserInfo(userInfo)
+        this.setData({ userInfo })
+      },
+      fail: () => {
+        console.log('用户拒绝授权')
+      }
+    })
+  },
+
+  // 检查今日是否已有记录
+  checkTodayRecord() {
+    const todayRecord = Storage.getCheckinByDate(this.data.currentDate)
+    if (todayRecord) {
+      // 如果今日已有记录，加载数据
+      this.setData({
+        questions: todayRecord.questions || [''],
+        videoInfo: {
+          url: todayRecord.videoUrl || '',
+          cover: todayRecord.videoCover || ''
+        },
+        diary: todayRecord.diary || '',
+        images: todayRecord.images || []
+      })
+    }
   },
 
   // 预习提问相关方法
@@ -78,49 +116,62 @@ Page({
       sourceType: ['album', 'camera'],
       maxDuration: 300, // 5分钟
       success: (res) => {
+        // 检查视频大小（限制50MB）
+        if (res.size > 50 * 1024 * 1024) {
+          wx.showToast({
+            title: '视频文件过大，请选择小于50MB的视频',
+            icon: 'none',
+            duration: 2000
+          })
+          return
+        }
+        
         this.uploadVideo(res.tempFilePath)
+      },
+      fail: () => {
+        wx.showToast({
+          title: '选择视频失败',
+          icon: 'none'
+        })
       }
     })
   },
 
   uploadVideo(filePath) {
-    this.setData({ uploadProgress: 0 })
+    this.setData({ uploadProgress: 10 })
     
-    const uploadTask = wx.uploadFile({
-      url: `${app.globalData.apiBase}/upload/video`,
-      filePath,
-      name: 'file',
-      header: {
-        'Authorization': `Bearer ${wx.getStorageSync('token')}`
-      },
-      success: (res) => {
-        const data = JSON.parse(res.data)
+    // 模拟上传进度
+    const progressInterval = setInterval(() => {
+      const currentProgress = this.data.uploadProgress
+      if (currentProgress < 90) {
         this.setData({
-          videoInfo: {
-            url: data.url,
-            cover: data.cover
-          },
-          uploadProgress: 100
+          uploadProgress: currentProgress + 10
         })
-        
-        setTimeout(() => {
-          this.setData({ uploadProgress: 0 })
-        }, 1000)
-      },
-      fail: (error) => {
-        wx.showToast({
-          title: '上传失败',
-          icon: 'error'
-        })
-        this.setData({ uploadProgress: 0 })
       }
-    })
+    }, 200)
 
-    uploadTask.onProgressUpdate((res) => {
+    // 模拟上传完成
+    setTimeout(() => {
+      clearInterval(progressInterval)
+      
+      // 保存视频到本地存储（实际项目中应该上传到服务器）
       this.setData({
-        uploadProgress: res.progress
+        videoInfo: {
+          url: filePath,
+          cover: filePath // 使用视频文件作为封面
+        },
+        uploadProgress: 100
       })
-    })
+      
+      wx.showToast({
+        title: '视频上传成功',
+        icon: 'success'
+      })
+      
+      setTimeout(() => {
+        this.setData({ uploadProgress: 0 })
+      }, 1000)
+    }, 2000)
   },
 
   deleteVideo() {
@@ -155,46 +206,32 @@ Page({
       sourceType: ['album', 'camera'],
       success: (res) => {
         this.uploadImages(res.tempFilePaths)
+      },
+      fail: () => {
+        wx.showToast({
+          title: '选择图片失败',
+          icon: 'none'
+        })
       }
     })
   },
 
   uploadImages(filePaths) {
-    wx.showLoading({ title: '上传中...' })
+    wx.showLoading({ title: '处理图片中...' })
     
-    const uploadPromises = filePaths.map(filePath => {
-      return new Promise((resolve, reject) => {
-        wx.uploadFile({
-          url: `${app.globalData.apiBase}/upload/image`,
-          filePath,
-          name: 'file',
-          header: {
-            'Authorization': `Bearer ${wx.getStorageSync('token')}`
-          },
-          success: (res) => {
-            const data = JSON.parse(res.data)
-            resolve(data.url)
-          },
-          fail: reject
-        })
+    // 模拟图片处理和上传
+    setTimeout(() => {
+      // 直接使用本地临时路径（实际项目中应该上传到服务器）
+      this.setData({
+        images: [...this.data.images, ...filePaths]
       })
-    })
-
-    Promise.all(uploadPromises)
-      .then(urls => {
-        this.setData({
-          images: [...this.data.images, ...urls]
-        })
+      
+      wx.hideLoading()
+      wx.showToast({
+        title: '图片添加成功',
+        icon: 'success'
       })
-      .catch(() => {
-        wx.showToast({
-          title: '上传失败',
-          icon: 'error'
-        })
-      })
-      .finally(() => {
-        wx.hideLoading()
-      })
+    }, 1000)
   },
 
   deleteImage(e) {
@@ -223,6 +260,14 @@ Page({
       return
     }
 
+    if (!this.data.diary.trim()) {
+      wx.showToast({
+        title: '请填写学习日记',
+        icon: 'none'
+      })
+      return
+    }
+
     this.setData({ submitting: true })
 
     const data = {
@@ -234,35 +279,25 @@ Page({
       images: this.data.images
     }
 
-    wx.request({
-      url: `${app.globalData.apiBase}/checkin`,
-      method: 'POST',
-      header: {
-        'Authorization': `Bearer ${wx.getStorageSync('token')}`
-      },
-      data,
-      success: (res) => {
-        if (res.data.success) {
-          this.showSuccessToast()
-          this.clearForm()
-          this.clearDraft()
-        } else {
-          wx.showToast({
-            title: res.data.message || '提交失败',
-            icon: 'error'
-          })
-        }
-      },
-      fail: () => {
+    // 保存到本地存储
+    const result = Storage.saveCheckinRecord(data)
+    
+    setTimeout(() => {
+      if (result.success) {
+        this.showSuccessToast()
+        this.clearDraft()
+        
+        // 更新统计数据
+        const stats = Storage.getStatistics()
+        console.log('更新后的统计数据:', stats)
+      } else {
         wx.showToast({
-          title: '网络错误',
+          title: '保存失败，请重试',
           icon: 'error'
         })
-      },
-      complete: () => {
-        this.setData({ submitting: false })
       }
-    })
+      this.setData({ submitting: false })
+    }, 1000)
   },
 
   // 显示成功提示
@@ -273,14 +308,10 @@ Page({
     }, 3000)
   },
 
-  // 清空表单
+  // 清空表单（保留当前数据，用户可能想要修改）
   clearForm() {
-    this.setData({
-      questions: [''],
-      videoInfo: { url: '', cover: '' },
-      diary: '',
-      images: []
-    })
+    // 不清空表单，保持当前数据
+    // 用户可以继续修改今日的打卡内容
   },
 
   // 头像点击事件
