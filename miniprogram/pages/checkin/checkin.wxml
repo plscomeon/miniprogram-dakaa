@@ -3,9 +3,17 @@
   <view class="content-container">
     <!-- 顶部状态栏 -->
     <view class="status-bar">
-      <view class="user-info" bindtap="onAvatarTap">
+      <view class="user-info" wx:if="{{userInfo.nickName}}" bindtap="onAvatarTap">
         <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
-        <text class="username">{{userInfo.nickName || '未登录'}}</text>
+        <text class="username">{{userInfo.nickName}}</text>
+      </view>
+      <view class="user-info" wx:else>
+        <button class="avatar-button" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+          <image class="avatar" src="/images/default-avatar.png" mode="aspectFill"></image>
+        </button>
+        <button class="login-button" open-type="getUserProfile" bindtap="getUserProfile">
+          <text class="username">点击登录</text>
+        </button>
       </view>
       <view class="date-info">
         <text class="date">{{currentDate}}</text>

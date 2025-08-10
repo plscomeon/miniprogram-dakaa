@@ -57,17 +57,58 @@ Page({
     }
   },
 
-  // 获取微信用户信息
-  getWechatUserInfo() {
+  // 获取微信用户信息 - 使用新版API
+  getUserProfile() {
     wx.getUserProfile({
       desc: '用于显示用户信息',
       success: (res) => {
         const userInfo = res.userInfo
         Storage.saveUserInfo(userInfo)
         this.setData({ userInfo })
+        wx.showToast({
+          title: '登录成功',
+          icon: 'success'
+        })
+      },
+      fail: (err) => {
+        console.log('用户拒绝授权', err)
+        wx.showToast({
+          title: '需要授权才能使用',
+          icon: 'none'
+        })
+      }
+    })
+  },
+
+  // 选择头像 - 使用新版API
+  onChooseAvatar(e) {
+    const { avatarUrl } = e.detail
+    const currentUserInfo = this.data.userInfo || {}
+    const newUserInfo = {
+      ...currentUserInfo,
+      avatarUrl: avatarUrl
+    }
+    Storage.saveUserInfo(newUserInfo)
+    this.setData({ userInfo: newUserInfo })
+    
+    wx.showToast({
+      title: '头像更新成功',
+      icon: 'success'
+    })
+  },
+
+  // 获取微信用户信息 - 兼容旧版本
+  getWechatUserInfo() {
+    // 先尝试获取已授权的用户信息
+    wx.getUserInfo({
+      success: (res) => {
+        const userInfo = res.userInfo
+        Storage.saveUserInfo(userInfo)
+        this.setData({ userInfo })
       },
       fail: () => {
-        console.log('用户拒绝授权')
+        // 如果没有授权，引导用户点击登录按钮
+        console.log('用户未授权，需要点击登录按钮')
       }
     })
   },
