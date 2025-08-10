@@ -10,6 +10,7 @@ Page({
     totalWords: 0,
     achievements: [],
     totalAchievements: 8,
+    unlockedCount: 0,
     reminderEnabled: true,
     syncEnabled: false,
     showExportModal: false,
@@ -203,7 +204,13 @@ Page({
       }
     })
     
-    this.setData({ achievements })
+    // 计算已解锁成就数量
+    const unlockedCount = achievements.filter(item => item.unlocked).length
+    
+    this.setData({ 
+      achievements,
+      unlockedCount
+    })
   },
 
   // 获取本月打卡天数

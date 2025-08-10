@@ -37,7 +37,7 @@
     <view class="achievement-card">
       <view class="card-header">
         <text class="card-title">学习成就</text>
-        <text class="achievement-count">{{achievements.filter(item => item.unlocked).length}}/{{totalAchievements}}</text>
+        <text class="achievement-count">{{unlockedCount}}/{{totalAchievements}}</text>
       </view>
       <view class="achievement-list">
         <view class="achievement-item {{item.unlocked ? 'unlocked' : 'locked'}}" wx:for="{{achievements}}" wx:key="id">
