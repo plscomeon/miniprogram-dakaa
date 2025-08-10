@@ -1,0 +1,89 @@
+<!--pages/record-detail/record-detail.wxml-->
+<view class="page-container">
+  <view class="content-container">
+    <!-- 记录头部 -->
+    <view class="record-header">
+      <view class="date-info">
+        <text class="date-text">{{record.date}}</text>
+        <text class="day-text">{{dayOfWeek}}</text>
+      </view>
+      <view class="modules-info">
+        <text class="module-tag completed" wx:if="{{record.questions && record.questions.length > 0}}">预习</text>
+        <text class="module-tag completed" wx:if="{{record.videoUrl}}">视频</text>
+        <text class="module-tag completed" wx:if="{{record.diary}}">日记</text>
+      </view>
+    </view>
+
+    <!-- 预习问题 -->
+    <view class="section" wx:if="{{record.questions && record.questions.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">预习提问</text>
+        <text class="section-count">{{record.questions.length}}个问题</text>
+      </view>
+      <view class="questions-list">
+        <view class="question-item" wx:for="{{record.questions}}" wx:key="index">
+          <view class="question-number">{{index + 1}}</view>
+          <text class="question-text">{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 视频讲解 -->
+    <view class="section" wx:if="{{record.videoUrl}}">
+      <view class="section-header">
+        <text class="section-title">视频讲解</text>
+      </view>
+      <view class="video-container">
+        <video 
+          src="{{record.videoUrl}}" 
+          controls 
+          class="video-player"
+          poster="{{record.videoCover}}"
+          show-center-play-btn="{{true}}"
+          show-play-btn="{{true}}">
+        </video>
+      </view>
+    </view>
+
+    <!-- 学习日记 -->
+    <view class="section" wx:if="{{record.diary}}">
+      <view class="section-header">
+        <text class="section-title">学习日记</text>
+      </view>
+      <view class="diary-content">
+        <text class="diary-text">{{record.diary}}</text>
+      </view>
+    </view>
+
+    <!-- 图片附件 -->
+    <view class="section" wx:if="{{record.images && record.images.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">图片附件</text>
+        <text class="section-count">{{record.images.length}}张</text>
+      </view>
+      <view class="images-grid">
+        <image 
+          class="image-item" 
+          src="{{item}}" 
+          mode="aspectFill"
+          wx:for="{{record.images}}" 
+          wx:key="index"
+          bindtap="previewImage"
+          data-index="{{index}}">
+        </image>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="actions">
+      <button class="action-btn secondary" bindtap="shareRecord">
+        <text class="btn-icon">📤</text>
+        <text class="btn-text">分享</text>
+      </button>
+      <button class="action-btn secondary" bindtap="exportRecord">
+        <text class="btn-icon">📄</text>
+        <text class="btn-text">导出</text>
+      </button>
+    </view>
+  </view>
+</view>

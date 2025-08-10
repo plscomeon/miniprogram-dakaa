@@ -2,7 +2,8 @@
   "pages": [
     "pages/checkin/checkin",
     "pages/history/history",
-    "pages/profile/profile"
+    "pages/profile/profile",
+    "pages/record-detail/record-detail"
   ],
   "window": {
     "backgroundColor": "#F9FAFB",

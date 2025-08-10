@@ -1,0 +1,187 @@
+/* pages/record-detail/record-detail.wxss */
+
+/* 记录头部 */
+.record-header {
+  background: #FFFFFF;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  border-radius: 16rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.date-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.date-text {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 8rpx;
+}
+
+.day-text {
+  font-size: 24rpx;
+  color: #8E8E93;
+}
+
+.modules-info {
+  display: flex;
+  gap: 12rpx;
+}
+
+.module-tag {
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.module-tag.completed {
+  background: #E8F5E8;
+  color: #07C160;
+}
+
+/* 内容区块 */
+.section {
+  background: #FFFFFF;
+  margin-bottom: 24rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 32rpx 32rpx 24rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1rpx solid #F5F5F5;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.section-count {
+  font-size: 24rpx;
+  color: #8E8E93;
+}
+
+/* 问题列表 */
+.questions-list {
+  padding: 0 32rpx 32rpx;
+}
+
+.question-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 24rpx;
+}
+
+.question-item:last-child {
+  margin-bottom: 0;
+}
+
+.question-number {
+  width: 48rpx;
+  height: 48rpx;
+  background: #07C160;
+  color: #FFFFFF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 600;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.question-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1A1A1A;
+  line-height: 1.6;
+  padding-top: 12rpx;
+}
+
+/* 视频容器 */
+.video-container {
+  padding: 0 32rpx 32rpx;
+}
+
+.video-player {
+  width: 100%;
+  height: 400rpx;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+/* 日记内容 */
+.diary-content {
+  padding: 0 32rpx 32rpx;
+}
+
+.diary-text {
+  font-size: 28rpx;
+  color: #1A1A1A;
+  line-height: 1.8;
+  display: block;
+}
+
+/* 图片网格 */
+.images-grid {
+  padding: 0 32rpx 32rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.image-item {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+/* 操作按钮 */
+.actions {
+  display: flex;
+  gap: 24rpx;
+  padding: 32rpx 0;
+}
+
+.action-btn {
+  flex: 1;
+  height: 88rpx;
+  border-radius: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.action-btn.secondary {
+  background: #F8F8F8;
+  color: #1A1A1A;
+  border: none;
+}
+
+.action-btn.secondary::after {
+  border: none;
+}
+
+.btn-icon {
+  font-size: 32rpx;
+}
+
+.btn-text {
+  font-size: 28rpx;
+}

@@ -1,16 +1,24 @@
 // 历史记录页面逻辑
-const app = getApp()
+const Storage = require('../../utils/storage.js')
 
 Page({
   data: {
-    userInfo: {},
+    // 统计数据
+    totalDays: 0,
+    streakDays: 0,
+    monthDays: 0,
+    
+    // 日历相关
     currentYear: new Date().getFullYear(),
     currentMonth: new Date().getMonth() + 1,
-    calendarData: [],
-    checkInDates: [],
-    selectedDate: '',
+    weekdays: ['日', '一', '二', '三', '四', '五', '六'],
+    calendarDays: [],
+    
+    // 记录相关
+    records: [],
     selectedRecord: null,
-    loading: false,
+    
+    // 搜索相关
     searchKeyword: '',
     showSearchResults: false,
     searchResults: []
@@ -21,64 +29,158 @@ Page({
   },
 
   onShow() {
-    this.loadCheckInData()
+    this.loadData()
   },
 
   // 初始化页面
   initPage() {
-    this.getUserInfo()
     this.generateCalendar()
+    this.loadData()
   },
 
-  // 获取用户信息
-  getUserInfo() {
-    const userInfo = wx.getStorageSync('userInfo') || {}
-    this.setData({ userInfo })
+  // 加载数据
+  loadData() {
+    this.loadStatistics()
+    this.loadRecords()
+  },
+
+  // 加载统计数据
+  loadStatistics() {
+    try {
+      const stats = Storage.getStatistics()
+      
+      // 计算本月天数
+      const { currentYear, currentMonth } = this.data
+      const allRecords = Storage.getCheckinRecords()
+      const monthRecords = allRecords.filter(record => {
+        const recordDate = new Date(record.date)
+        return recordDate.getFullYear() === currentYear && 
+               recordDate.getMonth() + 1 === currentMonth
+      })
+      
+      this.setData({
+        totalDays: stats.totalDays,
+        streakDays: stats.streakDays,
+        monthDays: monthRecords.length
+      })
+    } catch (error) {
+      console.error('加载统计数据失败:', error)
+    }
+  },
+
+  // 加载记录列表
+  loadRecords() {
+    try {
+      const { currentYear, currentMonth } = this.data
+      const allRecords = Storage.getCheckinRecords()
+      
+      // 筛选当前月份的记录
+      const monthRecords = allRecords.filter(record => {
+        const recordDate = new Date(record.date)
+        return recordDate.getFullYear() === currentYear && 
+               recordDate.getMonth() + 1 === currentMonth
+      })
+      
+      // 格式化记录数据
+      const formattedRecords = monthRecords.map(record => {
+        const date = new Date(record.date)
+        const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
+        
+        // 生成摘要
+        let summary = ''
+        if (record.questions && record.questions.length > 0) {
+          summary += `${record.questions.length}个问题`
+        }
+        if (record.videoUrl) {
+          summary += summary ? '，视频讲解' : '视频讲解'
+        }
+        if (record.diary) {
+          const diaryPreview = record.diary.length > 20 ? 
+            record.diary.substring(0, 20) + '...' : record.diary
+          summary += summary ? `，${diaryPreview}` : diaryPreview
+        }
+        
+        return {
+          id: record.id,
+          date: record.date,
+          dayOfWeek,
+          preview: record.questions && record.questions.length > 0,
+          video: !!record.videoUrl,
+          diary: !!record.diary,
+          summary: summary || '学习打卡'
+        }
+      })
+      
+      this.setData({ records: formattedRecords })
+      this.generateCalendar() // 重新生成日历以显示打卡标记
+    } catch (error) {
+      console.error('加载记录失败:', error)
+      wx.showToast({
+        title: '加载记录失败',
+        icon: 'error'
+      })
+    }
   },
 
   // 生成日历数据
   generateCalendar() {
-    const { currentYear, currentMonth } = this.data
+    const { currentYear, currentMonth, records } = this.data
     const firstDay = new Date(currentYear, currentMonth - 1, 1)
     const lastDay = new Date(currentYear, currentMonth, 0)
     const daysInMonth = lastDay.getDate()
     const startWeekday = firstDay.getDay()
     
-    const calendarData = []
-    let week = []
+    const calendarDays = []
     
-    // 填充月初空白
-    for (let i = 0; i < startWeekday; i++) {
-      week.push({ day: '', isEmpty: true })
-    }
+    // 填充上月末尾日期
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear
+    const prevMonthLastDay = new Date(prevYear, prevMonth, 0).getDate()
     
-    // 填充日期
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      const hasCheckIn = this.data.checkInDates.includes(dateStr)
-      
-      week.push({
+    for (let i = startWeekday - 1; i >= 0; i--) {
+      const day = prevMonthLastDay - i
+      const date = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      calendarDays.push({
         day,
-        dateStr,
-        hasCheckIn,
-        isToday: this.isToday(currentYear, currentMonth - 1, day)
+        date,
+        isOtherMonth: true,
+        isToday: false,
+        hasRecord: false
       })
+    }
+    
+    // 填充当月日期
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      const isToday = this.isToday(currentYear, currentMonth - 1, day)
+      const hasRecord = records.some(record => record.date === date)
       
-      if (week.length === 7) {
-        calendarData.push(week)
-        week = []
-      }
+      calendarDays.push({
+        day,
+        date,
+        isOtherMonth: false,
+        isToday,
+        hasRecord
+      })
     }
     
-    // 填充月末空白
-    while (week.length < 7 && week.length > 0) {
-      week.push({ day: '', isEmpty: true })
-    }
-    if (week.length > 0) {
-      calendarData.push(week)
+    // 填充下月开头日期
+    const remainingDays = 42 - calendarDays.length // 6行 * 7天
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear
+    
+    for (let day = 1; day <= remainingDays; day++) {
+      const date = `${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      calendarDays.push({
+        day,
+        date,
+        isOtherMonth: true,
+        isToday: false,
+        hasRecord: false
+      })
     }
     
-    this.setData({ calendarData })
+    this.setData({ calendarDays })
   },
 
   // 判断是否为今天
@@ -89,99 +191,48 @@ Page({
            day === today.getDate()
   },
 
-  // 加载打卡数据
-  loadCheckInData() {
-    const { currentYear, currentMonth } = this.data
-    
-    // 先从缓存获取
-    const cacheKey = `checkin_${currentYear}_${currentMonth}`
-    const cached = wx.getStorageSync(cacheKey)
-    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
-      this.setData({ checkInDates: cached.dates })
-      this.generateCalendar()
-      return
-    }
-
-    wx.request({
-      url: `${app.globalData.apiBase}/checkin/list`,
-      method: 'GET',
-      header: {
-        'Authorization': `Bearer ${wx.getStorageSync('token')}`
-      },
-      data: {
-        year: currentYear,
-        month: currentMonth
-      },
-      success: (res) => {
-        if (res.data.success) {
-          const dates = res.data.data.map(item => item.date)
-          this.setData({ checkInDates: dates })
-          this.generateCalendar()
-          
-          // 缓存数据
-          wx.setStorageSync(cacheKey, {
-            dates,
-            timestamp: Date.now()
-          })
-        }
-      },
-      fail: () => {
-        wx.showToast({
-          title: '加载失败',
-          icon: 'error'
-        })
-      }
-    })
-  },
-
-  // 日期选择
-  onDateSelect(e) {
+  // 选择日期
+  selectDate(e) {
     const { date } = e.currentTarget.dataset
     if (!date) return
     
-    const hasCheckIn = this.data.checkInDates.includes(date)
-    if (!hasCheckIn) return
+    // 查找该日期的记录
+    const record = this.data.records.find(r => r.date === date)
+    if (!record) {
+      wx.showToast({
+        title: '该日期无打卡记录',
+        icon: 'none'
+      })
+      return
+    }
     
-    this.setData({ 
-      selectedDate: date,
-      loading: true,
-      selectedRecord: null
-    })
-    
-    this.loadRecordDetail(date)
+    this.viewRecord({ currentTarget: { dataset: { id: record.id } } })
   },
 
-  // 加载记录详情
-  loadRecordDetail(date) {
-    wx.request({
-      url: `${app.globalData.apiBase}/checkin/detail`,
-      method: 'GET',
-      header: {
-        'Authorization': `Bearer ${wx.getStorageSync('token')}`
-      },
-      data: { date },
-      success: (res) => {
-        if (res.data.success) {
-          this.setData({ 
-            selectedRecord: res.data.data,
-            loading: false
-          })
-        } else {
-          this.setData({ loading: false })
-          wx.showToast({
-            title: '加载失败',
-            icon: 'error'
-          })
-        }
-      },
-      fail: () => {
-        this.setData({ loading: false })
+  // 查看记录详情
+  viewRecord(e) {
+    const { id } = e.currentTarget.dataset
+    try {
+      const allRecords = Storage.getCheckinRecords()
+      const record = allRecords.find(r => r.id === id)
+      if (record) {
+        // 跳转到记录详情页面
+        wx.navigateTo({
+          url: `/pages/record-detail/record-detail?id=${id}`
+        })
+      } else {
         wx.showToast({
-          title: '网络错误',
+          title: '记录不存在',
           icon: 'error'
         })
       }
-    })
+    } catch (error) {
+      console.error('查看记录失败:', error)
+      wx.showToast({
+        title: '查看记录失败',
+        icon: 'error'
+      })
+    }
   },
 
   // 上一月
@@ -194,12 +245,9 @@ Page({
     }
     this.setData({ 
       currentYear, 
-      currentMonth,
-      selectedDate: '',
-      selectedRecord: null
+      currentMonth
     })
-    this.generateCalendar()
-    this.loadCheckInData()
+    this.loadRecords()
   },
 
   // 下一月
@@ -212,15 +260,12 @@ Page({
     }
     this.setData({ 
       currentYear, 
-      currentMonth,
-      selectedDate: '',
-      selectedRecord: null
+      currentMonth
     })
-    this.generateCalendar()
-    this.loadCheckInData()
+    this.loadRecords()
   },
 
-  // 搜索输入
+  // 搜索记录
   onSearchInput(e) {
     this.setData({ searchKeyword: e.detail.value })
   },
@@ -228,161 +273,72 @@ Page({
   // 执行搜索
   onSearch() {
     const { searchKeyword } = this.data
-    if (!searchKeyword.trim()) return
+    if (!searchKeyword.trim()) {
+      this.setData({ showSearchResults: false })
+      return
+    }
     
-    this.setData({ showSearchResults: true })
-    
-    wx.request({
-      url: `${app.globalData.apiBase}/checkin/search`,
-      method: 'GET',
-      header: {
-        'Authorization': `Bearer ${wx.getStorageSync('token')}`
-      },
-      data: { keyword: searchKeyword },
-      success: (res) => {
-        if (res.data.success) {
-          this.setData({ searchResults: res.data.data })
+    try {
+      const allRecords = Storage.getCheckinRecords()
+      const searchResults = allRecords.filter(record => {
+        const keyword = searchKeyword.toLowerCase()
+        
+        // 搜索问题内容
+        if (record.questions && record.questions.some(q => 
+          q.toLowerCase().includes(keyword))) {
+          return true
         }
-      },
-      fail: () => {
-        wx.showToast({
-          title: '搜索失败',
-          icon: 'error'
-        })
-      }
-    })
+        
+        // 搜索日记内容
+        if (record.diary && record.diary.toLowerCase().includes(keyword)) {
+          return true
+        }
+        
+        // 搜索日期
+        if (record.date.includes(keyword)) {
+          return true
+        }
+        
+        return false
+      })
+      
+      // 格式化搜索结果
+      const formattedResults = searchResults.map(record => {
+        const date = new Date(record.date)
+        const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
+        
+        return {
+          id: record.id,
+          date: record.date,
+          dayOfWeek,
+          preview: record.questions && record.questions.length > 0,
+          video: !!record.videoUrl,
+          diary: !!record.diary,
+          summary: record.diary ? 
+            (record.diary.length > 30 ? record.diary.substring(0, 30) + '...' : record.diary) :
+            `${record.questions ? record.questions.length : 0}个问题`
+        }
+      })
+      
+      this.setData({ 
+        searchResults: formattedResults,
+        showSearchResults: true
+      })
+    } catch (error) {
+      console.error('搜索失败:', error)
+      wx.showToast({
+        title: '搜索失败',
+        icon: 'error'
+      })
+    }
   },
 
   // 隐藏搜索结果
   hideSearchResults() {
     this.setData({ 
       showSearchResults: false,
-      searchResults: []
+      searchResults: [],
+      searchKeyword: ''
     })
-  },
-
-  // 选择搜索结果
-  selectSearchResult(e) {
-    const record = e.currentTarget.dataset.record
-    this.setData({
-      selectedDate: record.date,
-      selectedRecord: record,
-      showSearchResults: false
-    })
-    
-    // 跳转到对应月份
-    const [year, month] = record.date.split('-')
-    this.setData({
-      currentYear: parseInt(year),
-      currentMonth: parseInt(month)
-    })
-    this.generateCalendar()
-    this.loadCheckInData()
-  },
-
-  // 图片预览
-  previewImage(e) {
-    const { index } = e.currentTarget.dataset
-    const { selectedRecord } = this.data
-    wx.previewImage({
-      current: selectedRecord.images[index],
-      urls: selectedRecord.images
-    })
-  },
-
-  // 导出记录
-  exportRecord() {
-    const { selectedRecord } = this.data
-    if (!selectedRecord) return
-    
-    wx.showActionSheet({
-      itemList: ['导出为PDF', '导出为图片', '分享到微信'],
-      success: (res) => {
-        switch (res.tapIndex) {
-          case 0:
-            this.exportToPDF()
-            break
-          case 1:
-            this.exportToImage()
-            break
-          case 2:
-            this.shareToWeChat()
-            break
-        }
-      }
-    })
-  },
-
-  // 导出为PDF
-  exportToPDF() {
-    wx.showLoading({ title: '生成中...' })
-    
-    wx.request({
-      url: `${app.globalData.apiBase}/export/pdf`,
-      method: 'POST',
-      header: {
-        'Authorization': `Bearer ${wx.getStorageSync('token')}`
-      },
-      data: {
-        recordId: this.data.selectedRecord.id
-      },
-      success: (res) => {
-        if (res.data.success) {
-          wx.downloadFile({
-            url: res.data.fileUrl,
-            success: (downloadRes) => {
-              wx.openDocument({
-                filePath: downloadRes.tempFilePath,
-                fileType: 'pdf'
-              })
-            }
-          })
-        }
-      },
-      complete: () => {
-        wx.hideLoading()
-      }
-    })
-  },
-
-  // 导出为图片
-  exportToImage() {
-    wx.showLoading({ title: '生成中...' })
-    
-    // 这里可以使用canvas生成图片
-    // 简化实现，直接分享
-    setTimeout(() => {
-      wx.hideLoading()
-      wx.showToast({
-        title: '功能开发中',
-        icon: 'none'
-      })
-    }, 1000)
-  },
-
-  // 分享记录
-  shareRecord() {
-    wx.showShareMenu({
-      withShareTicket: true
-    })
-  },
-
-  // 分享到微信
-  shareToWeChat() {
-    const { selectedRecord } = this.data
-    wx.showShareMenu({
-      withShareTicket: true,
-      menus: ['shareAppMessage', 'shareTimeline']
-    })
-  },
-
-  // 页面分享
-  onShareAppMessage() {
-    const { selectedRecord } = this.data
-    return {
-      title: `我的${selectedRecord.date}学习打卡记录`,
-      path: `/pages/history/history?date=${selectedRecord.date}`,
-      imageUrl: selectedRecord.images[0] || '/images/share-default.png'
-    }
   }
 })
