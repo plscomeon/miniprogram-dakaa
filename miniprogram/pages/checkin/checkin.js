@@ -12,7 +12,6 @@ Page({
     },
     diary: '',
     images: [],
-    uploadProgress: 0,
     submitting: false,
     showSuccessToast: false,
     showUserMenu: false
@@ -140,11 +139,9 @@ Page({
     this.setData({ questions })
   },
 
-  // 视频上传相关方法
+  // 视频上传相关方法（与图片上传保持完全一致的逻辑）
   chooseVideo() {
-    wx.showLoading({ title: '选择视频中...' })
-    
-    // 优先使用chooseMedia（新版API）
+    // 检查是否支持chooseMedia（新版API）
     if (wx.chooseMedia) {
       wx.chooseMedia({
         count: 1,
@@ -152,7 +149,6 @@ Page({
         sourceType: ['album', 'camera'],
         maxDuration: 300, // 5分钟
         success: (res) => {
-          wx.hideLoading()
           const media = res.tempFiles[0]
           
           // 检查视频大小（限制50MB）
@@ -168,50 +164,46 @@ Page({
           this.uploadVideo(media.tempFilePath, media.thumbTempFilePath)
         },
         fail: (err) => {
-          wx.hideLoading()
-          console.log('chooseMedia选择视频失败:', err)
-          // 降级使用chooseVideo
-          this.chooseVideoFallback()
+          console.log('选择视频失败:', err)
+          wx.showToast({
+            title: '选择视频失败',
+            icon: 'none'
+          })
         }
       })
     } else {
-      wx.hideLoading()
-      // 直接使用chooseVideo
-      this.chooseVideoFallback()
-    }
-  },
-
-  chooseVideoFallback() {
-    wx.chooseVideo({
-      sourceType: ['album', 'camera'],
-      maxDuration: 300, // 5分钟
-      success: (res) => {
-        // 检查视频大小（限制50MB）
-        if (res.size > 50 * 1024 * 1024) {
+      // 降级使用chooseVideo
+      wx.chooseVideo({
+        sourceType: ['album', 'camera'],
+        maxDuration: 300, // 5分钟
+        success: (res) => {
+          // 检查视频大小（限制50MB）
+          if (res.size > 50 * 1024 * 1024) {
+            wx.showToast({
+              title: '视频文件过大，请选择小于50MB的视频',
+              icon: 'none',
+              duration: 2000
+            })
+            return
+          }
+          
+          this.uploadVideo(res.tempFilePath, res.thumbTempFilePath)
+        },
+        fail: (err) => {
+          console.log('选择视频失败:', err)
           wx.showToast({
-            title: '视频文件过大，请选择小于50MB的视频',
-            icon: 'none',
-            duration: 2000
+            title: '选择视频失败',
+            icon: 'none'
           })
-          return
         }
-        
-        this.uploadVideo(res.tempFilePath, res.thumbTempFilePath)
-      },
-      fail: (err) => {
-        console.log('chooseVideo选择视频失败:', err)
-        wx.showToast({
-          title: '选择视频失败，请重试',
-          icon: 'none'
-        })
-      }
-    })
+      })
+    }
   },
 
   uploadVideo(filePath, thumbPath) {
     wx.showLoading({ title: '处理视频中...' })
     
-    // 直接保存视频信息（与图片上传保持一致的逻辑）
+    // 直接使用本地临时路径（与图片上传保持一致的逻辑）
     setTimeout(() => {
       this.setData({
         videoInfo: {

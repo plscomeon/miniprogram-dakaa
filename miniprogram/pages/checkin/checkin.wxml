@@ -86,12 +86,6 @@
             <video class="preview-video" src="{{videoInfo.url}}" poster="{{videoInfo.cover}}" controls></video>
             <button class="btn btn-delete" bindtap="deleteVideo">删除视频</button>
           </view>
-          <view class="upload-progress" wx:if="{{uploadProgress > 0}}">
-            <view class="progress-bar">
-              <view class="progress-fill" style="width: {{uploadProgress}}%"></view>
-            </view>
-            <text class="progress-text">{{uploadProgress}}%</text>
-          </view>
         </view>
       </view>
 
