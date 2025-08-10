@@ -67,13 +67,24 @@ Page({
 
   // 选择头像 - 使用微信小程序最新API
   onChooseAvatar(e) {
+    console.log('选择头像事件:', e.detail)
     const { avatarUrl } = e.detail
+    
+    if (!avatarUrl) {
+      console.error('头像URL为空')
+      return
+    }
+    
     const currentUserInfo = this.data.userInfo || {}
     const newUserInfo = {
       ...currentUserInfo,
       avatarUrl: avatarUrl
     }
-    Storage.saveUserInfo(newUserInfo)
+    
+    // 保存用户信息
+    const saveResult = Storage.saveUserInfo(newUserInfo)
+    console.log('保存用户信息结果:', saveResult)
+    
     this.setData({ userInfo: newUserInfo })
     
     wx.showToast({
@@ -82,16 +93,22 @@ Page({
     })
   },
 
-  // 昵称输入完成
+  // 昵称输入完成 - 使用最新的输入处理方式
   onNicknameChange(e) {
     const nickName = e.detail.value.trim()
-    if (nickName) {
+    console.log('昵称输入:', nickName)
+    
+    if (nickName && nickName.length > 0) {
       const currentUserInfo = this.data.userInfo || {}
       const newUserInfo = {
         ...currentUserInfo,
         nickName: nickName
       }
-      Storage.saveUserInfo(newUserInfo)
+      
+      // 保存用户信息
+      const saveResult = Storage.saveUserInfo(newUserInfo)
+      console.log('保存用户信息结果:', saveResult)
+      
       this.setData({ userInfo: newUserInfo })
       
       wx.showToast({
@@ -99,6 +116,17 @@ Page({
         icon: 'success'
       })
     }
+  },
+
+  // 昵称输入实时处理
+  onNicknameInput(e) {
+    const nickName = e.detail.value
+    const currentUserInfo = this.data.userInfo || {}
+    const newUserInfo = {
+      ...currentUserInfo,
+      nickName: nickName
+    }
+    this.setData({ userInfo: newUserInfo })
   },
 
   // 检查今日是否已有记录
@@ -139,14 +167,76 @@ Page({
     this.setData({ questions })
   },
 
-  // 视频上传相关方法（完全采用与图片上传一致的简单逻辑）
+  // 视频上传相关方法 - 使用最新的chooseMedia API
   chooseVideo() {
-    // 直接使用chooseVideo API，简单可靠
+    console.log('开始选择视频...')
+    
+    // 优先使用最新的chooseMedia API
+    if (wx.chooseMedia) {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['video'],
+        sourceType: ['album', 'camera'],
+        maxDuration: 300, // 5分钟
+        camera: 'back',
+        success: (res) => {
+          console.log('chooseMedia选择视频成功:', res)
+          const tempFile = res.tempFiles[0]
+          
+          // 检查视频大小（限制50MB）
+          if (tempFile.size > 50 * 1024 * 1024) {
+            wx.showToast({
+              title: '视频文件过大，请选择小于50MB的视频',
+              icon: 'none',
+              duration: 2000
+            })
+            return
+          }
+          
+          // 检查视频时长（限制5分钟）
+          if (tempFile.duration > 300) {
+            wx.showToast({
+              title: '视频时长过长，请选择5分钟内的视频',
+              icon: 'none',
+              duration: 2000
+            })
+            return
+          }
+          
+          // 直接保存视频信息
+          this.setData({
+            videoInfo: {
+              url: tempFile.tempFilePath,
+              cover: tempFile.thumbTempFilePath || tempFile.tempFilePath
+            }
+          })
+          
+          wx.showToast({
+            title: '视频添加成功',
+            icon: 'success'
+          })
+        },
+        fail: (err) => {
+          console.error('chooseMedia选择视频失败:', err)
+          // 降级使用chooseVideo
+          this.chooseVideoFallback()
+        }
+      })
+    } else {
+      // 降级使用chooseVideo
+      this.chooseVideoFallback()
+    }
+  },
+
+  // 降级方案：使用chooseVideo API
+  chooseVideoFallback() {
+    console.log('使用chooseVideo降级方案...')
     wx.chooseVideo({
       sourceType: ['album', 'camera'],
       maxDuration: 300, // 5分钟
+      camera: 'back',
       success: (res) => {
-        console.log('选择视频成功:', res)
+        console.log('chooseVideo选择视频成功:', res)
         
         // 检查视频大小（限制50MB）
         if (res.size && res.size > 50 * 1024 * 1024) {
@@ -168,7 +258,7 @@ Page({
           return
         }
         
-        // 直接保存视频信息（与图片上传完全一致的逻辑）
+        // 直接保存视频信息
         this.setData({
           videoInfo: {
             url: res.tempFilePath,
@@ -182,10 +272,11 @@ Page({
         })
       },
       fail: (err) => {
-        console.error('选择视频失败:', err)
+        console.error('chooseVideo选择视频失败:', err)
         wx.showToast({
           title: '选择视频失败，请重试',
-          icon: 'none'
+          icon: 'none',
+          duration: 2000
         })
       }
     })

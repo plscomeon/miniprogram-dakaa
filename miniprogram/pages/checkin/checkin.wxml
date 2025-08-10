@@ -16,6 +16,7 @@
                  type="nickname" 
                  placeholder="请输入昵称" 
                  value="{{userInfo.nickName}}"
+                 bind:input="onNicknameInput"
                  bind:blur="onNicknameChange" />
         </view>
       </view>
