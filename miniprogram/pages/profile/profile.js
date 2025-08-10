@@ -51,37 +51,140 @@ Page({
     }
   },
 
-  // 加载用户数据
+  // 加载用户数据 - 使用API方式获取真实数据
   loadUserData() {
+    wx.showLoading({ title: '加载数据中...' })
+    
     try {
-      const stats = Storage.getStats()
-      const records = Storage.getRecords()
+      // 获取所有打卡记录
+      const allRecords = Storage.getCheckinRecords()
+      console.log('获取到的打卡记录:', allRecords)
       
-      // 计算总字数
-      let totalWords = 0
-      records.forEach(record => {
-        if (record.diary) {
-          totalWords += record.diary.length
-        }
-        if (record.questions && Array.isArray(record.questions)) {
-          record.questions.forEach(q => {
-            totalWords += q.length
-          })
-        }
-      })
-
+      if (!allRecords || allRecords.length === 0) {
+        // 没有数据时设置默认值
+        this.setData({
+          totalDays: 0,
+          streakDays: 0,
+          totalVideos: 0,
+          totalWords: 0
+        })
+        wx.hideLoading()
+        this.updateAchievements()
+        return
+      }
+      
+      // 计算统计数据
+      const stats = this.calculateRealStatistics(allRecords)
+      console.log('计算出的统计数据:', stats)
+      
       this.setData({
         totalDays: stats.totalDays,
-        streakDays: stats.streakDays,
+        streakDays: stats.continuousDays,
         totalVideos: stats.totalVideos,
-        totalWords: totalWords
+        totalWords: stats.totalWords
       })
-
+      
+      wx.hideLoading()
       // 更新成就进度
       this.updateAchievements()
     } catch (error) {
       console.error('加载用户数据失败:', error)
+      wx.hideLoading()
+      wx.showToast({
+        title: '数据加载失败',
+        icon: 'none'
+      })
     }
+  },
+
+  // 计算真实的统计数据
+  calculateRealStatistics(records) {
+    if (!records || records.length === 0) {
+      return {
+        totalDays: 0,
+        continuousDays: 0,
+        totalVideos: 0,
+        totalWords: 0
+      }
+    }
+
+    let totalDays = records.length
+    let totalVideos = 0
+    let totalWords = 0
+
+    // 遍历所有记录计算统计数据
+    records.forEach(record => {
+      // 统计视频数量
+      if (record.videoUrl) {
+        totalVideos++
+      }
+
+      // 统计字数
+      if (record.diary) {
+        totalWords += record.diary.length
+      }
+
+      // 统计问题字数
+      if (record.questions && Array.isArray(record.questions)) {
+        record.questions.forEach(q => {
+          if (q && typeof q === 'string') {
+            totalWords += q.length
+          }
+        })
+      }
+    })
+
+    // 计算连续天数
+    const continuousDays = this.calculateContinuousDays(records)
+
+    return {
+      totalDays,
+      continuousDays,
+      totalVideos,
+      totalWords
+    }
+  },
+
+  // 计算连续天数
+  calculateContinuousDays(records) {
+    if (!records || records.length === 0) return 0
+
+    // 按日期排序（最新的在前）
+    const sortedRecords = records.sort((a, b) => new Date(b.date) - new Date(a.date))
+    
+    let continuousDays = 0
+    const today = new Date()
+    let checkDate = new Date(today)
+
+    // 从今天开始往前检查连续天数
+    for (let i = 0; i < sortedRecords.length; i++) {
+      const recordDate = new Date(sortedRecords[i].date)
+      const checkDateStr = checkDate.toISOString().split('T')[0]
+      const recordDateStr = recordDate.toISOString().split('T')[0]
+
+      if (recordDateStr === checkDateStr) {
+        continuousDays++
+        checkDate.setDate(checkDate.getDate() - 1)
+      } else {
+        // 如果不连续，检查是否是第一天就不连续
+        if (i === 0) {
+          // 第一条记录就不是今天，检查是否是昨天
+          const yesterday = new Date(today)
+          yesterday.setDate(yesterday.getDate() - 1)
+          const yesterdayStr = yesterday.toISOString().split('T')[0]
+          
+          if (recordDateStr === yesterdayStr) {
+            continuousDays++
+            checkDate = new Date(yesterday)
+            checkDate.setDate(checkDate.getDate() - 1)
+            continue
+          }
+        }
+        break
+      }
+    }
+
+    return continuousDays
   },
 
   // 初始化成就系统
@@ -216,7 +319,9 @@ Page({
   // 获取本月打卡天数
   getMonthlyDays() {
     try {
-      const records = Storage.getRecords()
+      const records = Storage.getCheckinRecords()
+      if (!records || records.length === 0) return 0
+      
       const now = new Date()
       const currentMonth = now.getMonth()
       const currentYear = now.getFullYear()
@@ -227,6 +332,7 @@ Page({
                recordDate.getFullYear() === currentYear
       }).length
     } catch (error) {
+      console.error('获取本月打卡天数失败:', error)
       return 0
     }
   },
@@ -328,7 +434,7 @@ Page({
     
     try {
       const { exportType, dateRange } = this.data
-      const records = Storage.getRecords()
+      const records = Storage.getCheckinRecords()
       
       // 根据日期范围筛选数据
       let filteredRecords = records
