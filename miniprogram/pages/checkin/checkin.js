@@ -18,10 +18,18 @@ Page({
   },
 
   onLoad() {
+    // 检查全局登录状态
+    const app = getApp()
+    if (!app.isUserLoggedIn()) {
+      console.log('用户未登录，显示默认信息')
+    }
+    
     this.initPage()
   },
 
   onShow() {
+    // 每次显示页面时检查用户信息更新
+    this.getUserInfo()
     this.loadDraft()
     this.checkTodayRecord()
   },
@@ -81,9 +89,13 @@ Page({
       avatarUrl: avatarUrl
     }
     
-    // 保存用户信息
+    // 保存用户信息到本地存储
     const saveResult = Storage.saveUserInfo(newUserInfo)
     console.log('保存用户信息结果:', saveResult)
+    
+    // 更新全局用户信息
+    const app = getApp()
+    app.setUserInfo(newUserInfo)
     
     this.setData({ userInfo: newUserInfo })
     
@@ -105,9 +117,13 @@ Page({
         nickName: nickName
       }
       
-      // 保存用户信息
+      // 保存用户信息到本地存储
       const saveResult = Storage.saveUserInfo(newUserInfo)
       console.log('保存用户信息结果:', saveResult)
+      
+      // 更新全局用户信息
+      const app = getApp()
+      app.setUserInfo(newUserInfo)
       
       this.setData({ userInfo: newUserInfo })
       

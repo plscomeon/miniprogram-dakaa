@@ -392,7 +392,13 @@ Page({
     try {
       const userInfo = { ...this.data.userInfo, avatarUrl: filePath }
       this.setData({ userInfo })
+      
+      // 保存到本地存储
       Storage.saveUserInfo(userInfo)
+      
+      // 更新全局用户信息
+      const app = getApp()
+      app.setUserInfo(userInfo)
       
       wx.showToast({
         title: '头像更新成功',
@@ -477,7 +483,7 @@ Page({
         title: '导出失败',
         icon: 'error'
       })
-    }
+     }
   },
 
   // 生成导出数据

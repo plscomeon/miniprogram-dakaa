@@ -21,10 +21,23 @@ Page({
   },
 
   onLoad() {
+    // 检查全局登录状态
+    const app = getApp()
+    if (!app.isUserLoggedIn()) {
+      console.log('用户未登录，显示空数据')
+      // 可以选择跳转到登录页面或显示提示
+      wx.showToast({
+        title: '请先完善个人信息',
+        icon: 'none',
+        duration: 2000
+      })
+    }
+    
     this.initPage()
   },
 
   onShow() {
+    // 每次显示页面时重新加载数据，确保显示最新的用户数据
     this.loadData()
   },
 
