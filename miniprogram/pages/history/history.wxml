@@ -42,53 +42,8 @@
     </view>
   </view>
 
-  <!-- 搜索功能 -->
-  <view class="search-section">
-    <view class="search-bar">
-      <input 
-        class="search-input" 
-        placeholder="搜索打卡记录..." 
-        value="{{searchKeyword}}"
-        bindinput="onSearchInput"
-        bindconfirm="onSearch"
-        confirm-type="search">
-      </input>
-      <button class="search-btn" bindtap="onSearch">搜索</button>
-    </view>
-  </view>
-
-  <!-- 搜索结果 -->
-  <view class="search-results" wx:if="{{showSearchResults}}">
-    <view class="search-header">
-      <text class="search-title">搜索结果</text>
-      <text class="search-count">{{searchResults.length}}条</text>
-      <button class="close-search" bindtap="hideSearchResults">×</button>
-    </view>
-    <view class="records-list" wx:if="{{searchResults.length > 0}}">
-      <view class="record-item" wx:for="{{searchResults}}" wx:key="id" bindtap="viewRecord" data-id="{{item.id}}">
-        <view class="record-date">
-          <text class="date-text">{{item.date}}</text>
-          <text class="day-text">{{item.dayOfWeek}}</text>
-        </view>
-        <view class="record-content">
-          <view class="record-modules">
-            <text class="module-tag completed" wx:if="{{item.preview}}">预习</text>
-            <text class="module-tag completed" wx:if="{{item.video}}">视频</text>
-            <text class="module-tag completed" wx:if="{{item.diary}}">日记</text>
-          </view>
-          <text class="record-summary">{{item.summary}}</text>
-        </view>
-        <view class="record-arrow">›</view>
-      </view>
-    </view>
-    <view class="empty-state" wx:else>
-      <view class="empty-icon">🔍</view>
-      <text class="empty-text">未找到相关记录</text>
-    </view>
-  </view>
-
   <!-- 记录列表 -->
-  <view class="records-section" wx:if="{{!showSearchResults}}">
+  <view class="records-section">
     <view class="section-header">
       <text class="section-title">打卡记录</text>
       <text class="record-count">{{records.length}}条记录</text>

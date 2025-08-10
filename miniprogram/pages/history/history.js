@@ -18,10 +18,6 @@ Page({
     records: [],
     selectedRecord: null,
     
-    // 搜索相关
-    searchKeyword: '',
-    showSearchResults: false,
-    searchResults: []
   },
 
   onLoad() {
@@ -265,80 +261,4 @@ Page({
     this.loadRecords()
   },
 
-  // 搜索记录
-  onSearchInput(e) {
-    this.setData({ searchKeyword: e.detail.value })
-  },
-
-  // 执行搜索
-  onSearch() {
-    const { searchKeyword } = this.data
-    if (!searchKeyword.trim()) {
-      this.setData({ showSearchResults: false })
-      return
-    }
-    
-    try {
-      const allRecords = Storage.getCheckinRecords()
-      const searchResults = allRecords.filter(record => {
-        const keyword = searchKeyword.toLowerCase()
-        
-        // 搜索问题内容
-        if (record.questions && record.questions.some(q => 
-          q.toLowerCase().includes(keyword))) {
-          return true
-        }
-        
-        // 搜索日记内容
-        if (record.diary && record.diary.toLowerCase().includes(keyword)) {
-          return true
-        }
-        
-        // 搜索日期
-        if (record.date.includes(keyword)) {
-          return true
-        }
-        
-        return false
-      })
-      
-      // 格式化搜索结果
-      const formattedResults = searchResults.map(record => {
-        const date = new Date(record.date)
-        const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
-        
-        return {
-          id: record.id,
-          date: record.date,
-          dayOfWeek,
-          preview: record.questions && record.questions.length > 0,
-          video: !!record.videoUrl,
-          diary: !!record.diary,
-          summary: record.diary ? 
-            (record.diary.length > 30 ? record.diary.substring(0, 30) + '...' : record.diary) :
-            `${record.questions ? record.questions.length : 0}个问题`
-        }
-      })
-      
-      this.setData({ 
-        searchResults: formattedResults,
-        showSearchResults: true
-      })
-    } catch (error) {
-      console.error('搜索失败:', error)
-      wx.showToast({
-        title: '搜索失败',
-        icon: 'error'
-      })
-    }
-  },
-
-  // 隐藏搜索结果
-  hideSearchResults() {
-    this.setData({ 
-      showSearchResults: false,
-      searchResults: [],
-      searchKeyword: ''
-    })
-  }
 })
