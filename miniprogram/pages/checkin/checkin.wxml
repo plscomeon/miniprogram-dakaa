@@ -11,7 +11,7 @@
         <button class="avatar-button" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
           <image class="avatar" src="/images/default-avatar.png" mode="aspectFill"></image>
         </button>
-        <button class="login-button" open-type="getUserProfile" bindtap="getUserProfile">
+        <button class="login-button" bindtap="getUserProfile">
           <text class="username">点击登录</text>
         </button>
       </view>

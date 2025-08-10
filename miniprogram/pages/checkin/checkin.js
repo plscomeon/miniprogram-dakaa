@@ -57,26 +57,48 @@ Page({
     }
   },
 
-  // 获取微信用户信息 - 使用新版API
+  // 获取微信用户信息 - 使用最新API
   getUserProfile() {
-    wx.getUserProfile({
-      desc: '用于显示用户信息',
-      success: (res) => {
-        const userInfo = res.userInfo
-        Storage.saveUserInfo(userInfo)
-        this.setData({ userInfo })
-        wx.showToast({
-          title: '登录成功',
-          icon: 'success'
-        })
-      },
-      fail: (err) => {
-        console.log('用户拒绝授权', err)
-        wx.showToast({
-          title: '需要授权才能使用',
-          icon: 'none'
-        })
-      }
+    // 检查是否支持getUserProfile
+    if (wx.getUserProfile) {
+      wx.getUserProfile({
+        desc: '用于显示用户信息',
+        success: (res) => {
+          const userInfo = res.userInfo
+          Storage.saveUserInfo(userInfo)
+          this.setData({ userInfo })
+          wx.showToast({
+            title: '登录成功',
+            icon: 'success'
+          })
+        },
+        fail: (err) => {
+          console.log('用户拒绝授权', err)
+          wx.showToast({
+            title: '需要授权才能使用完整功能',
+            icon: 'none'
+          })
+          // 设置默认用户信息
+          this.setDefaultUserInfo()
+        }
+      })
+    } else {
+      // 降级处理，设置默认用户信息
+      this.setDefaultUserInfo()
+    }
+  },
+
+  // 设置默认用户信息
+  setDefaultUserInfo() {
+    const defaultUserInfo = {
+      nickName: '学习者',
+      avatarUrl: '/images/default-avatar.png'
+    }
+    Storage.saveUserInfo(defaultUserInfo)
+    this.setData({ userInfo: defaultUserInfo })
+    wx.showToast({
+      title: '已设置默认信息',
+      icon: 'success'
     })
   },
 
@@ -153,32 +175,65 @@ Page({
 
   // 视频上传相关方法
   chooseVideo() {
-    wx.chooseVideo({
-      sourceType: ['album', 'camera'],
-      maxDuration: 300, // 5分钟
-      success: (res) => {
-        // 检查视频大小（限制50MB）
-        if (res.size > 50 * 1024 * 1024) {
+    // 检查是否支持chooseMedia（新版API）
+    if (wx.chooseMedia) {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['video'],
+        sourceType: ['album', 'camera'],
+        maxDuration: 300, // 5分钟
+        success: (res) => {
+          const media = res.tempFiles[0]
+          // 检查视频大小（限制50MB）
+          if (media.size > 50 * 1024 * 1024) {
+            wx.showToast({
+              title: '视频文件过大，请选择小于50MB的视频',
+              icon: 'none',
+              duration: 2000
+            })
+            return
+          }
+          
+          this.uploadVideo(media.tempFilePath, media.thumbTempFilePath)
+        },
+        fail: (err) => {
+          console.log('选择视频失败:', err)
           wx.showToast({
-            title: '视频文件过大，请选择小于50MB的视频',
-            icon: 'none',
-            duration: 2000
+            title: '选择视频失败',
+            icon: 'none'
           })
-          return
         }
-        
-        this.uploadVideo(res.tempFilePath)
-      },
-      fail: () => {
-        wx.showToast({
-          title: '选择视频失败',
-          icon: 'none'
-        })
-      }
-    })
+      })
+    } else {
+      // 降级使用chooseVideo
+      wx.chooseVideo({
+        sourceType: ['album', 'camera'],
+        maxDuration: 300, // 5分钟
+        success: (res) => {
+          // 检查视频大小（限制50MB）
+          if (res.size > 50 * 1024 * 1024) {
+            wx.showToast({
+              title: '视频文件过大，请选择小于50MB的视频',
+              icon: 'none',
+              duration: 2000
+            })
+            return
+          }
+          
+          this.uploadVideo(res.tempFilePath, res.thumbTempFilePath)
+        },
+        fail: (err) => {
+          console.log('选择视频失败:', err)
+          wx.showToast({
+            title: '选择视频失败',
+            icon: 'none'
+          })
+        }
+      })
+    }
   },
 
-  uploadVideo(filePath) {
+  uploadVideo(filePath, thumbPath) {
     this.setData({ uploadProgress: 10 })
     
     // 模拟上传进度
@@ -199,7 +254,7 @@ Page({
       this.setData({
         videoInfo: {
           url: filePath,
-          cover: filePath // 使用视频文件作为封面
+          cover: thumbPath || filePath // 使用缩略图或视频文件作为封面
         },
         uploadProgress: 100
       })
@@ -241,20 +296,42 @@ Page({
       return
     }
 
-    wx.chooseImage({
-      count: maxCount,
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success: (res) => {
-        this.uploadImages(res.tempFilePaths)
-      },
-      fail: () => {
-        wx.showToast({
-          title: '选择图片失败',
-          icon: 'none'
-        })
-      }
-    })
+    // 检查是否支持chooseMedia（新版API）
+    if (wx.chooseMedia) {
+      wx.chooseMedia({
+        count: maxCount,
+        mediaType: ['image'],
+        sourceType: ['album', 'camera'],
+        success: (res) => {
+          const tempFilePaths = res.tempFiles.map(file => file.tempFilePath)
+          this.uploadImages(tempFilePaths)
+        },
+        fail: (err) => {
+          console.log('选择图片失败:', err)
+          wx.showToast({
+            title: '选择图片失败',
+            icon: 'none'
+          })
+        }
+      })
+    } else {
+      // 降级使用chooseImage
+      wx.chooseImage({
+        count: maxCount,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+        success: (res) => {
+          this.uploadImages(res.tempFilePaths)
+        },
+        fail: (err) => {
+          console.log('选择图片失败:', err)
+          wx.showToast({
+            title: '选择图片失败',
+            icon: 'none'
+          })
+        }
+      })
+    }
   },
 
   uploadImages(filePaths) {
