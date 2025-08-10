@@ -60,63 +60,15 @@ App({
   // 检查是否已登录
   isUserLoggedIn: function() {
     return this.globalData.isLoggedIn;
-  }
-});
-    }
-
-    // 检查登录状态
-    this.checkLoginStatus();
-  },
-
-  // 检查登录状态
-  checkLoginStatus() {
-    const token = wx.getStorageSync('token');
-    if (token) {
-      // 验证token有效性
-      wx.request({
-        url: `${this.globalData.apiBase}/auth/verify`,
-        header: {
-          'Authorization': `Bearer ${token}`
-        },
-        success: (res) => {
-          if (res.data.success) {
-            this.globalData.userInfo = res.data.userInfo;
-          } else {
-            // token无效，清除本地存储
-            wx.removeStorageSync('token');
-            wx.removeStorageSync('userInfo');
-          }
-        },
-        fail: () => {
-          // 网络错误，保持当前状态
-          console.log('网络错误，无法验证登录状态');
-        }
-      });
-    }
   },
 
   // 全局错误处理
-  onError(error) {
+  onError: function(error) {
     console.error('小程序错误:', error);
-    
-    // 上报错误信息
-    if (this.globalData.apiBase) {
-      wx.request({
-        url: `${this.globalData.apiBase}/error/report`,
-        method: 'POST',
-        data: {
-          error: error.toString(),
-          stack: error.stack,
-          timestamp: Date.now(),
-          userAgent: wx.getSystemInfoSync(),
-          userInfo: this.globalData.userInfo
-        }
-      });
-    }
   },
 
   // 页面未找到处理
-  onPageNotFound(res) {
+  onPageNotFound: function(res) {
     console.log('页面未找到:', res);
     wx.reLaunch({
       url: '/pages/checkin/checkin'
