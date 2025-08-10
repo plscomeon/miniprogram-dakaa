@@ -1,0 +1,359 @@
+/* pages/profile/profile.wxss */
+
+/* 用户信息卡片 */
+.user-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 32rpx;
+  border-radius: 16rpx;
+  margin-bottom: 32rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+}
+
+.user-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 32rpx;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.user-desc {
+  font-size: 28rpx;
+  color: #888;
+}
+
+/* 数据统计网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24rpx;
+  margin-bottom: 32rpx;
+}
+
+.stats-item {
+  background: #fff;
+  padding: 32rpx;
+  border-radius: 16rpx;
+  text-align: center;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+}
+
+.stats-number {
+  display: block;
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #07c160;
+  margin-bottom: 8rpx;
+}
+
+.stats-label {
+  font-size: 24rpx;
+  color: #888;
+}
+
+/* 成就系统 */
+.achievement-card {
+  background: #fff;
+  border-radius: 16rpx;
+  margin-bottom: 32rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.card-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.achievement-count {
+  font-size: 24rpx;
+  color: #888;
+}
+
+.achievement-list {
+  padding: 0 32rpx;
+}
+
+.achievement-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.achievement-item:last-child {
+  border-bottom: none;
+}
+
+.achievement-item.locked {
+  opacity: 0.5;
+}
+
+.achievement-icon {
+  font-size: 48rpx;
+  margin-right: 24rpx;
+}
+
+.achievement-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.achievement-name {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4rpx;
+}
+
+.achievement-desc {
+  font-size: 24rpx;
+  color: #888;
+}
+
+.achievement-status {
+  font-size: 24rpx;
+}
+
+.status-unlocked {
+  color: #07c160;
+}
+
+.status-locked {
+  color: #888;
+}
+
+/* 功能菜单 */
+.menu-section {
+  background: #fff;
+  border-radius: 16rpx;
+  margin-bottom: 32rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item:active {
+  background: #f8f8f8;
+}
+
+.menu-icon {
+  font-size: 40rpx;
+  margin-right: 24rpx;
+}
+
+.menu-title {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.menu-arrow {
+  font-size: 32rpx;
+  color: #ccc;
+}
+
+/* 设置选项 */
+.settings-section {
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.settings-item:last-child {
+  border-bottom: none;
+}
+
+.settings-title {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.settings-switch {
+  transform: scale(0.8);
+}
+
+/* 导出数据弹窗 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+  z-index: 1000;
+}
+
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 16rpx;
+  width: 600rpx;
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.modal-close {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: none;
+  font-size: 32rpx;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  padding: 32rpx;
+}
+
+.export-options {
+  display: flex;
+  gap: 24rpx;
+  margin-bottom: 32rpx;
+}
+
+.export-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32rpx;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  transition: all 0.2s;
+}
+
+.export-option.selected {
+  border-color: #07c160;
+  background: #f0f9f0;
+}
+
+.option-icon {
+  font-size: 48rpx;
+  margin-bottom: 16rpx;
+}
+
+.option-title {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.date-range {
+  margin-bottom: 32rpx;
+}
+
+.range-label {
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 16rpx;
+  display: block;
+}
+
+.date-options {
+  display: flex;
+  gap: 16rpx;
+}
+
+.date-option {
+  flex: 1;
+  padding: 16rpx;
+  text-align: center;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.date-option.active {
+  background: #07c160;
+  border-color: #07c160;
+  color: #fff;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 16rpx;
+  padding: 32rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.modal-footer .btn {
+  flex: 1;
+}

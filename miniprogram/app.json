@@ -1,0 +1,43 @@
+{
+  "pages": [
+    "pages/checkin/checkin",
+    "pages/history/history",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "backgroundColor": "#F9FAFB",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTitleText": "Learning Tracker",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#8E8E93",
+    "selectedColor": "#3B82F6",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/checkin/checkin",
+        "text": "今日打卡",
+        "iconPath": "images/icons/checkin.png",
+        "selectedIconPath": "images/icons/checkin-active.png"
+      },
+      {
+        "pagePath": "pages/history/history",
+        "text": "历史记录",
+        "iconPath": "images/icons/history.png",
+        "selectedIconPath": "images/icons/history-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/icons/profile.png",
+        "selectedIconPath": "images/icons/profile-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

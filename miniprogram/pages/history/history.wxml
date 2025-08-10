@@ -1,0 +1,76 @@
+<!--pages/history/history.wxml-->
+<view class="page-container">
+  <view class="content-container">
+  <!-- 统计概览 -->
+  <view class="stats-card">
+    <view class="stats-item">
+      <text class="stats-number">{{totalDays}}</text>
+      <text class="stats-label">总天数</text>
+    </view>
+    <view class="stats-item">
+      <text class="stats-number">{{streakDays}}</text>
+      <text class="stats-label">连续天数</text>
+    </view>
+    <view class="stats-item">
+      <text class="stats-number">{{monthDays}}</text>
+      <text class="stats-label">本月天数</text>
+    </view>
+  </view>
+
+  <!-- 日历视图 -->
+  <view class="calendar-card">
+    <view class="calendar-header">
+      <button class="nav-btn" bindtap="prevMonth">‹</button>
+      <text class="calendar-title">{{currentYear}}年{{currentMonth}}月</text>
+      <button class="nav-btn" bindtap="nextMonth">›</button>
+    </view>
+    
+    <view class="calendar-weekdays">
+      <text class="weekday" wx:for="{{weekdays}}" wx:key="*this">{{item}}</text>
+    </view>
+    
+    <view class="calendar-days">
+      <view 
+        class="calendar-day {{item.isToday ? 'today' : ''}} {{item.hasRecord ? 'has-record' : ''}} {{item.isOtherMonth ? 'other-month' : ''}}"
+        wx:for="{{calendarDays}}" 
+        wx:key="index"
+        bindtap="selectDate"
+        data-date="{{item.date}}">
+        <text class="day-number">{{item.day}}</text>
+        <view class="day-dot" wx:if="{{item.hasRecord}}"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 记录列表 -->
+  <view class="records-section">
+    <view class="section-header">
+      <text class="section-title">学习记录</text>
+      <text class="record-count">{{records.length}}条记录</text>
+    </view>
+    
+    <view class="records-list" wx:if="{{records.length > 0}}">
+      <view class="record-item" wx:for="{{records}}" wx:key="id" bindtap="viewRecord" data-id="{{item.id}}">
+        <view class="record-date">
+          <text class="date-text">{{item.date}}</text>
+          <text class="day-text">{{item.dayOfWeek}}</text>
+        </view>
+        <view class="record-content">
+          <view class="record-modules">
+            <text class="module-tag completed" wx:if="{{item.preview}}">预习</text>
+            <text class="module-tag completed" wx:if="{{item.video}}">视频</text>
+            <text class="module-tag completed" wx:if="{{item.diary}}">日记</text>
+          </view>
+          <text class="record-summary">{{item.summary}}</text>
+        </view>
+        <view class="record-arrow">›</view>
+      </view>
+    </view>
+    
+    <view class="empty-state" wx:else>
+      <view class="empty-icon">📝</view>
+      <text class="empty-text">暂无学习记录</text>
+    </view>
+  </view>
+  </view>
+</view>

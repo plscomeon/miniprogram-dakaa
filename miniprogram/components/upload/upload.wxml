@@ -1,0 +1,31 @@
+<!--上传组件-->
+<view class="upload-container">
+  <view class="upload-area {{uploading ? 'uploading' : ''}}" bindtap="chooseFile" wx:if="{{!fileUrl}}">
+    <view class="upload-icon">
+      <text wx:if="{{type === 'image'}}">📷</text>
+      <text wx:if="{{type === 'video'}}">🎥</text>
+      <text wx:if="{{type === 'file'}}">📄</text>
+    </view>
+    <view class="upload-text">{{uploadText}}</view>
+    <view class="upload-hint" wx:if="{{hint}}">{{hint}}</view>
+  </view>
+
+  <view class="file-preview" wx:if="{{fileUrl}}">
+    <image class="preview-image" src="{{fileUrl}}" mode="aspectFill" wx:if="{{type === 'image'}}"></image>
+    <video class="preview-video" src="{{fileUrl}}" poster="{{coverUrl}}" wx:if="{{type === 'video'}}"></video>
+    <view class="file-info" wx:if="{{type === 'file'}}">
+      <text class="file-icon">📄</text>
+      <text class="file-name">{{fileName}}</text>
+    </view>
+    <button class="delete-btn" bindtap="deleteFile">
+      <text class="delete-icon">✕</text>
+    </button>
+  </view>
+
+  <view class="upload-progress" wx:if="{{uploading}}">
+    <view class="progress-bar">
+      <view class="progress-fill" style="width: {{progress}}%"></view>
+    </view>
+    <text class="progress-text">上传中 {{progress}}%</text>
+  </view>
+</view>

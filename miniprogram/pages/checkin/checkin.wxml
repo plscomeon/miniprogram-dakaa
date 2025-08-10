@@ -1,0 +1,98 @@
+<!--pages/checkin/checkin.wxml-->
+<view class="page-container">
+  <view class="content-container">
+  <!-- 顶部状态 -->
+  <view class="status-bar">
+    <view class="date-info">
+      <text class="date">{{currentDate}}</text>
+      <text class="day">{{currentDay}}</text>
+    </view>
+    <view class="streak-info">
+      <text class="streak-number">{{streakDays}}</text>
+      <text class="streak-text">连续天数</text>
+    </view>
+  </view>
+
+  <!-- 打卡模块 -->
+  <view class="checkin-modules">
+    <!-- 预习提问 -->
+    <view class="module-card {{previewCompleted ? 'completed' : ''}}">
+      <view class="module-header">
+        <view class="module-icon">📚</view>
+        <view class="module-title">预习提问</view>
+        <view class="module-status">
+          <text wx:if="{{previewCompleted}}" class="status-completed">已完成</text>
+          <text wx:else class="status-pending">待完成</text>
+        </view>
+      </view>
+      <view class="module-content" wx:if="{{!previewCompleted}}">
+        <textarea 
+          class="input-area" 
+          placeholder="请输入今天的预习问题..."
+          value="{{previewQuestion}}"
+          bindinput="onPreviewInput"
+          maxlength="500">
+        </textarea>
+        <button class="btn btn-primary" bindtap="submitPreview">提交预习</button>
+      </view>
+      <view class="module-result" wx:else>
+        <text class="result-text">{{previewQuestion}}</text>
+      </view>
+    </view>
+
+    <!-- 视频上传 -->
+    <view class="module-card {{videoCompleted ? 'completed' : ''}}">
+      <view class="module-header">
+        <view class="module-icon">🎥</view>
+        <view class="module-title">视频上传</view>
+        <view class="module-status">
+          <text wx:if="{{videoCompleted}}" class="status-completed">已完成</text>
+          <text wx:else class="status-pending">待完成</text>
+        </view>
+      </view>
+      <view class="module-content" wx:if="{{!videoCompleted}}">
+        <view class="upload-area" bindtap="chooseVideo">
+          <view class="upload-icon">📹</view>
+          <text class="upload-text">点击上传学习视频</text>
+        </view>
+        <button class="btn btn-primary" bindtap="submitVideo" disabled="{{!videoPath}}">提交视频</button>
+      </view>
+      <view class="module-result" wx:else>
+        <video class="result-video" src="{{videoPath}}" controls></video>
+      </view>
+    </view>
+
+    <!-- 学习日记 -->
+    <view class="module-card {{diaryCompleted ? 'completed' : ''}}">
+      <view class="module-header">
+        <view class="module-icon">📝</view>
+        <view class="module-title">学习日记</view>
+        <view class="module-status">
+          <text wx:if="{{diaryCompleted}}" class="status-completed">已完成</text>
+          <text wx:else class="status-pending">待完成</text>
+        </view>
+      </view>
+      <view class="module-content" wx:if="{{!diaryCompleted}}">
+        <textarea 
+          class="input-area" 
+          placeholder="记录今天的学习心得..."
+          value="{{diaryContent}}"
+          bindinput="onDiaryInput"
+          maxlength="1000">
+        </textarea>
+        <button class="btn btn-primary" bindtap="submitDiary">提交日记</button>
+      </view>
+      <view class="module-result" wx:else>
+        <text class="result-text">{{diaryContent}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 完成总结 -->
+  <view class="summary-card" wx:if="{{allCompleted}}">
+    <view class="summary-icon">🎉</view>
+    <view class="summary-title">今日打卡完成！</view>
+    <view class="summary-text">坚持学习，每天进步一点点</view>
+  </view>
+  </view>
+</view>

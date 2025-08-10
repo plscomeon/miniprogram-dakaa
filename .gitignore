@@ -1,0 +1,21 @@
+# 微信小程序相关
+node_modules/
+miniprogram_npm/
+.DS_Store
+*.log
+
+# 开发工具相关
+.vscode/
+.idea/
+
+# 临时文件
+*.tmp
+*.temp
+
+# 用户数据
+user_data/
+logs/
+
+# 构建产物
+dist/
+build/

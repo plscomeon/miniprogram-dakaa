@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "今日打卡",
+  "navigationStyle": "custom",
+  "backgroundColor": "#F9FAFB",
+  "enablePullDownRefresh": false,
+  "disableScroll": false
+}
