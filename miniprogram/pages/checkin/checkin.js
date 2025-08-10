@@ -49,41 +49,10 @@ Page({
   // 获取用户信息
   getUserInfo() {
     const userInfo = Storage.getUserInfo()
-    this.setData({ userInfo })
-    
-    // 如果没有用户信息，尝试获取微信用户信息
-    if (!userInfo.nickName || userInfo.nickName === '学习者') {
-      this.getWechatUserInfo()
-    }
-  },
-
-  // 获取微信用户信息 - 使用最新API
-  getUserProfile() {
-    // 检查是否支持getUserProfile
-    if (wx.getUserProfile) {
-      wx.getUserProfile({
-        desc: '用于显示用户信息',
-        success: (res) => {
-          const userInfo = res.userInfo
-          Storage.saveUserInfo(userInfo)
-          this.setData({ userInfo })
-          wx.showToast({
-            title: '登录成功',
-            icon: 'success'
-          })
-        },
-        fail: (err) => {
-          console.log('用户拒绝授权', err)
-          wx.showToast({
-            title: '需要授权才能使用完整功能',
-            icon: 'none'
-          })
-          // 设置默认用户信息
-          this.setDefaultUserInfo()
-        }
-      })
+    if (userInfo && userInfo.nickName) {
+      this.setData({ userInfo })
     } else {
-      // 降级处理，设置默认用户信息
+      // 设置默认用户信息，引导用户完善
       this.setDefaultUserInfo()
     }
   },
@@ -91,18 +60,13 @@ Page({
   // 设置默认用户信息
   setDefaultUserInfo() {
     const defaultUserInfo = {
-      nickName: '学习者',
+      nickName: '',
       avatarUrl: '/images/default-avatar.png'
     }
-    Storage.saveUserInfo(defaultUserInfo)
     this.setData({ userInfo: defaultUserInfo })
-    wx.showToast({
-      title: '已设置默认信息',
-      icon: 'success'
-    })
   },
 
-  // 选择头像 - 使用新版API
+  // 选择头像 - 使用微信小程序最新API
   onChooseAvatar(e) {
     const { avatarUrl } = e.detail
     const currentUserInfo = this.data.userInfo || {}
@@ -119,20 +83,23 @@ Page({
     })
   },
 
-  // 获取微信用户信息 - 兼容旧版本
-  getWechatUserInfo() {
-    // 先尝试获取已授权的用户信息
-    wx.getUserInfo({
-      success: (res) => {
-        const userInfo = res.userInfo
-        Storage.saveUserInfo(userInfo)
-        this.setData({ userInfo })
-      },
-      fail: () => {
-        // 如果没有授权，引导用户点击登录按钮
-        console.log('用户未授权，需要点击登录按钮')
+  // 昵称输入完成
+  onNicknameChange(e) {
+    const nickName = e.detail.value.trim()
+    if (nickName) {
+      const currentUserInfo = this.data.userInfo || {}
+      const newUserInfo = {
+        ...currentUserInfo,
+        nickName: nickName
       }
-    })
+      Storage.saveUserInfo(newUserInfo)
+      this.setData({ userInfo: newUserInfo })
+      
+      wx.showToast({
+        title: '昵称保存成功',
+        icon: 'success'
+      })
+    }
   },
 
   // 检查今日是否已有记录

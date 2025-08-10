@@ -9,11 +9,15 @@
       </view>
       <view class="user-info" wx:else>
         <button class="avatar-button" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-          <image class="avatar" src="/images/default-avatar.png" mode="aspectFill"></image>
+          <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
         </button>
-        <button class="login-button" bindtap="getUserProfile">
-          <text class="username">点击登录</text>
-        </button>
+        <view class="nickname-input">
+          <input class="nickname-input-field" 
+                 type="nickname" 
+                 placeholder="请输入昵称" 
+                 value="{{userInfo.nickName}}"
+                 bind:blur="onNicknameChange" />
+        </view>
       </view>
       <view class="date-info">
         <text class="date">{{currentDate}}</text>
