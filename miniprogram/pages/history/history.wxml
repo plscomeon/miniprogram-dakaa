@@ -47,7 +47,7 @@
     <view class="search-bar">
       <input 
         class="search-input" 
-        placeholder="搜索学习记录..." 
+        placeholder="搜索打卡记录..." 
         value="{{searchKeyword}}"
         bindinput="onSearchInput"
         bindconfirm="onSearch"
@@ -90,7 +90,7 @@
   <!-- 记录列表 -->
   <view class="records-section" wx:if="{{!showSearchResults}}">
     <view class="section-header">
-      <text class="section-title">学习记录</text>
+      <text class="section-title">打卡记录</text>
       <text class="record-count">{{records.length}}条记录</text>
     </view>
     
@@ -114,7 +114,7 @@
     
     <view class="empty-state" wx:else>
       <view class="empty-icon">📝</view>
-      <text class="empty-text">暂无学习记录</text>
+      <text class="empty-text">暂无打卡记录</text>
     </view>
   </view>
   </view>

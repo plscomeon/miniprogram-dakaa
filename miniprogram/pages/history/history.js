@@ -1,4 +1,4 @@
-// 历史记录页面逻辑
+// 打卡记录页面逻辑
 const Storage = require('../../utils/storage.js')
 
 Page({
@@ -107,7 +107,7 @@ Page({
           preview: record.questions && record.questions.length > 0,
           video: !!record.videoUrl,
           diary: !!record.diary,
-          summary: summary || '学习打卡'
+          summary: summary || '打卡记录'
         }
       })
       
