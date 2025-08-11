@@ -60,23 +60,21 @@
   border: none;
 }
 
-/* 昵称输入框样式 */
-.nickname-input {
+/* 登录按钮样式 */
+.login-btn {
   margin-left: 16rpx;
-}
-
-.nickname-input-field {
-  background: #F8F9FA;
-  border: 2rpx solid #E5E5E5;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
   border-radius: 8rpx;
-  padding: 8rpx 16rpx;
+  padding: 16rpx 32rpx;
   font-size: 28rpx;
-  color: #333;
   min-width: 200rpx;
+  text-align: center;
 }
 
-.nickname-input-field:focus {
-  border-color: #07C160;
+.login-btn::after {
+  border: none;
 }
 
 /* 用户菜单 */

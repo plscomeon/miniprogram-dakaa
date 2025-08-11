@@ -86,102 +86,52 @@ Page({
     this.setData({ userInfo: defaultUserInfo })
   },
 
-  // 选择头像 - 使用微信小程序最新API
-  async onChooseAvatar(e) {
-    console.log('选择头像事件:', e.detail)
-    const { avatarUrl } = e.detail
-    
-    if (!avatarUrl) {
-      console.error('头像URL为空')
-      return
-    }
-    
-    try {
-      // 上传头像到云存储
-      const uploadResult = await CloudApi.uploadFile(avatarUrl, 'avatar.jpg', 'avatar')
-      if (!uploadResult.success) {
-        throw new Error('头像上传失败')
-      }
-      
-      const currentUserInfo = this.data.userInfo || {}
-      const newUserInfo = {
-        ...currentUserInfo,
-        avatarUrl: uploadResult.data.fileID
-      }
-      
-      // 保存用户信息到云数据库
-      const saveResult = await CloudApi.saveUserInfo(newUserInfo)
-      if (!saveResult.success) {
-        throw new Error('用户信息保存失败')
-      }
-      
-      // 更新全局用户信息
-      const app = getApp()
-      app.setUserInfo(newUserInfo)
-      
-      this.setData({ userInfo: newUserInfo })
-      
-      wx.showToast({
-        title: '头像更新成功',
-        icon: 'success'
-      })
-    } catch (error) {
-      console.error('头像更新失败:', error)
-      wx.showToast({
-        title: '头像更新失败，请重试',
-        icon: 'none'
-      })
-    }
-  },
-
-  // 昵称输入完成 - 使用最新的输入处理方式
-  async onNicknameChange(e) {
-    const nickName = e.detail.value.trim()
-    console.log('昵称输入:', nickName)
-    
-    if (nickName && nickName.length > 0) {
-      try {
-        const currentUserInfo = this.data.userInfo || {}
-        const newUserInfo = {
-          ...currentUserInfo,
-          nickName: nickName
+  // 获取微信用户信息 - 使用微信小程序官方API
+  getUserInfo() {
+    wx.getUserProfile({
+      desc: '用于完善用户资料',
+      success: async (res) => {
+        console.log('获取用户信息成功:', res)
+        
+        try {
+          const userInfo = {
+            nickName: res.userInfo.nickName,
+            avatarUrl: res.userInfo.avatarUrl,
+            openid: wx.getStorageSync('openid') || ''
+          }
+          
+          // 保存用户信息到云数据库
+          const saveResult = await CloudApi.saveUserInfo(userInfo)
+          if (!saveResult.success) {
+            throw new Error('用户信息保存失败')
+          }
+          
+          // 更新全局用户信息
+          const app = getApp()
+          app.setUserInfo(userInfo)
+          
+          this.setData({ userInfo: userInfo })
+          
+          wx.showToast({
+            title: '登录成功',
+            icon: 'success'
+          })
+        } catch (error) {
+          console.error('保存用户信息失败:', error)
+          wx.showToast({
+            title: '登录失败，请重试',
+            icon: 'none'
+          })
         }
-        
-        // 保存用户信息到云数据库
-        const saveResult = await CloudApi.saveUserInfo(newUserInfo)
-        if (!saveResult.success) {
-          throw new Error('昵称保存失败')
-        }
-        
-        // 更新全局用户信息
-        const app = getApp()
-        app.setUserInfo(newUserInfo)
-        
-        this.setData({ userInfo: newUserInfo })
-        
+      },
+      fail: (err) => {
+        console.error('获取用户信息失败:', err)
         wx.showToast({
-          title: '昵称保存成功',
-          icon: 'success'
-        })
-      } catch (error) {
-        console.error('昵称保存失败:', error)
-        wx.showToast({
-          title: '昵称保存失败，请重试',
+          title: '获取用户信息失败',
           icon: 'none'
         })
       }
-    }
-  },
-
-  // 昵称输入实时处理
-  onNicknameInput(e) {
-    const nickName = e.detail.value
-    const currentUserInfo = this.data.userInfo || {}
-    const newUserInfo = {
-      ...currentUserInfo,
-      nickName: nickName
-    }
-    this.setData({ userInfo: newUserInfo })
+    })
   },
 
   // 检查今日是否已有记录

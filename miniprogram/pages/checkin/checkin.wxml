@@ -8,17 +8,8 @@
         <text class="username">{{userInfo.nickName}}</text>
       </view>
       <view class="user-info" wx:else>
-        <button class="avatar-button" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-          <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
-        </button>
-        <view class="nickname-input">
-          <input class="nickname-input-field" 
-                 type="nickname" 
-                 placeholder="请输入昵称" 
-                 value="{{userInfo.nickName}}"
-                 bind:input="onNicknameInput"
-                 bind:blur="onNicknameChange" />
-        </view>
+        <image class="avatar" src="/images/default-avatar.png" mode="aspectFill"></image>
+        <button class="login-btn" bindtap="getUserInfo">获取微信用户信息</button>
       </view>
       <view class="date-info">
         <text class="date">{{currentDate}}</text>
