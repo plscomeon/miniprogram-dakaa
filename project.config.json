@@ -44,7 +44,7 @@
     "swc": false,
     "disableSWC": true
   },
-  "appid": "请替换为您的小程序AppID",
+  "appid": "wxc9d9d128c26552ef",
   "projectname": "Learning Tracker - 学习打卡小程序",
   "libVersion": "2.20.1",
   "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
