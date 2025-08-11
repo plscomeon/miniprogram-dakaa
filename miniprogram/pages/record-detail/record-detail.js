@@ -1,5 +1,5 @@
 // pages/record-detail/record-detail.js
-const Storage = require('../../utils/storage.js')
+const CloudApi = require('../../utils/cloudApi.js')
 
 Page({
   data: {
@@ -23,35 +23,47 @@ Page({
   },
 
   // 加载记录详情
-  loadRecord(id) {
+  async loadRecord(id) {
     try {
-      const allRecords = Storage.getCheckinRecords()
-      const record = allRecords.find(r => r.id === id)
-      if (record) {
-        // 计算星期几
-        const date = new Date(record.date)
-        const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
-        
-        this.setData({
-          record,
-          dayOfWeek
-        })
-        
-        // 设置页面标题
-        wx.setNavigationBarTitle({
-          title: `${record.date} 学习记录`
-        })
+      wx.showLoading({ title: '加载中...' })
+      
+      // 通过云函数获取所有记录，然后找到对应的记录
+      const result = await CloudApi.getCheckinRecords()
+      if (result.success) {
+        const record = result.data.find(r => r._id === id)
+        if (record) {
+          // 计算星期几
+          const date = new Date(record.date)
+          const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
+          
+          // 如果有云存储的图片，获取临时链接
+          if (record.images && record.images.length > 0) {
+            const tempResult = await CloudApi.getTempFileURL(record.images)
+            if (tempResult.success) {
+              record.images = tempResult.data.map(item => item.tempFileURL)
+            }
+          }
+          
+          this.setData({
+            record,
+            dayOfWeek
+          })
+          
+          // 设置页面标题
+          wx.setNavigationBarTitle({
+            title: `${record.date} 学习记录`
+          })
+        } else {
+          throw new Error('记录不存在')
+        }
       } else {
-        wx.showToast({
-          title: '记录不存在',
-          icon: 'error'
-        })
-        setTimeout(() => {
-          wx.navigateBack()
-        }, 1500)
+        throw new Error('获取记录失败')
       }
+      
+      wx.hideLoading()
     } catch (error) {
       console.error('加载记录失败:', error)
+      wx.hideLoading()
       wx.showToast({
         title: '加载记录失败',
         icon: 'error'

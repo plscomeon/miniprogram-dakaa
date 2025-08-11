@@ -1,5 +1,5 @@
 // 个人中心页面逻辑
-const Storage = require('../../utils/storage.js')
+const CloudApi = require('../../utils/cloudApi.js')
 
 Page({
   data: {
@@ -51,16 +51,28 @@ Page({
     }
   },
 
-  // 加载用户数据 - 使用API方式获取真实数据
-  loadUserData() {
+  // 加载用户数据 - 使用云函数获取真实数据
+  async loadUserData() {
     wx.showLoading({ title: '加载数据中...' })
     
     try {
-      // 获取所有打卡记录
-      const allRecords = Storage.getCheckinRecords()
-      console.log('获取到的打卡记录:', allRecords)
+      // 获取用户信息
+      const userResult = await CloudApi.getUserInfo()
+      if (userResult.success && userResult.data) {
+        this.setData({ userInfo: userResult.data })
+      }
       
-      if (!allRecords || allRecords.length === 0) {
+      // 获取统计数据
+      const statsResult = await CloudApi.getStats()
+      if (statsResult.success) {
+        const stats = statsResult.data
+        this.setData({
+          totalDays: stats.totalDays,
+          streakDays: stats.consecutiveDays,
+          totalVideos: stats.totalVideos,
+          totalWords: stats.totalDiaries + stats.totalQuestions
+        })
+      } else {
         // 没有数据时设置默认值
         this.setData({
           totalDays: 0,
@@ -68,21 +80,7 @@ Page({
           totalVideos: 0,
           totalWords: 0
         })
-        wx.hideLoading()
-        this.updateAchievements()
-        return
       }
-      
-      // 计算统计数据
-      const stats = this.calculateRealStatistics(allRecords)
-      console.log('计算出的统计数据:', stats)
-      
-      this.setData({
-        totalDays: stats.totalDays,
-        streakDays: stats.continuousDays,
-        totalVideos: stats.totalVideos,
-        totalWords: stats.totalWords
-      })
       
       wx.hideLoading()
       // 更新成就进度
@@ -317,20 +315,13 @@ Page({
   },
 
   // 获取本月打卡天数
-  getMonthlyDays() {
+  async getMonthlyDays() {
     try {
-      const records = Storage.getCheckinRecords()
-      if (!records || records.length === 0) return 0
-      
-      const now = new Date()
-      const currentMonth = now.getMonth()
-      const currentYear = now.getFullYear()
-      
-      return records.filter(record => {
-        const recordDate = new Date(record.date)
-        return recordDate.getMonth() === currentMonth && 
-               recordDate.getFullYear() === currentYear
-      }).length
+      const statsResult = await CloudApi.getStats()
+      if (statsResult.success) {
+        return statsResult.data.monthlyDays
+      }
+      return 0
     } catch (error) {
       console.error('获取本月打卡天数失败:', error)
       return 0
@@ -388,26 +379,40 @@ Page({
   },
 
   // 更新头像
-  updateAvatar(filePath) {
+  async updateAvatar(filePath) {
     try {
-      const userInfo = { ...this.data.userInfo, avatarUrl: filePath }
-      this.setData({ userInfo })
+      wx.showLoading({ title: '上传头像中...' })
       
-      // 保存到本地存储
-      Storage.saveUserInfo(userInfo)
+      // 上传头像到云存储
+      const uploadResult = await CloudApi.uploadFile(filePath, 'avatar.jpg', 'avatar')
+      if (!uploadResult.success) {
+        throw new Error('头像上传失败')
+      }
+      
+      const userInfo = { ...this.data.userInfo, avatarUrl: uploadResult.data.fileID }
+      
+      // 保存到云数据库
+      const saveResult = await CloudApi.saveUserInfo(userInfo)
+      if (!saveResult.success) {
+        throw new Error('用户信息保存失败')
+      }
+      
+      this.setData({ userInfo })
       
       // 更新全局用户信息
       const app = getApp()
       app.setUserInfo(userInfo)
       
+      wx.hideLoading()
       wx.showToast({
         title: '头像更新成功',
         icon: 'success'
       })
     } catch (error) {
       console.error('更新头像失败:', error)
+      wx.hideLoading()
       wx.showToast({
-        title: '更新失败',
+        title: '更新失败，请重试',
         icon: 'error'
       })
     }
@@ -435,23 +440,28 @@ Page({
   },
 
   // 确认导出
-  confirmExport() {
+  async confirmExport() {
     wx.showLoading({ title: '生成中...' })
     
     try {
       const { exportType, dateRange } = this.data
-      const records = Storage.getCheckinRecords()
       
-      // 根据日期范围筛选数据
-      let filteredRecords = records
+      // 获取打卡记录
+      const result = await CloudApi.getCheckinRecords()
+      if (!result.success) {
+        throw new Error('获取记录失败')
+      }
+      
+      let filteredRecords = result.data
       const now = new Date()
       
+      // 根据日期范围筛选数据
       if (dateRange === 'week') {
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        filteredRecords = records.filter(record => new Date(record.date) >= weekAgo)
+        filteredRecords = filteredRecords.filter(record => new Date(record.date) >= weekAgo)
       } else if (dateRange === 'month') {
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        filteredRecords = records.filter(record => new Date(record.date) >= monthAgo)
+        filteredRecords = filteredRecords.filter(record => new Date(record.date) >= monthAgo)
       }
       
       // 生成导出数据

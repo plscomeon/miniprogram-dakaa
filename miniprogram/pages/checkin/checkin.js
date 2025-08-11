@@ -1,5 +1,5 @@
 // 今日打卡页面逻辑
-const Storage = require('../../utils/storage.js')
+const CloudApi = require('../../utils/cloudApi.js')
 
 Page({
   data: {
@@ -54,12 +54,25 @@ Page({
   },
 
   // 获取用户信息
-  getUserInfo() {
-    const userInfo = Storage.getUserInfo()
-    if (userInfo && userInfo.nickName) {
-      this.setData({ userInfo })
-    } else {
-      // 设置默认用户信息，引导用户完善
+  async getUserInfo() {
+    try {
+      const result = await CloudApi.getUserInfo()
+      if (result.success && result.data) {
+        const userInfo = {
+          nickName: result.data.nickName || '',
+          avatarUrl: result.data.avatarUrl || '/images/default-avatar.png'
+        }
+        this.setData({ userInfo })
+        
+        // 更新全局用户信息
+        const app = getApp()
+        app.setUserInfo(userInfo)
+      } else {
+        // 设置默认用户信息，引导用户完善
+        this.setDefaultUserInfo()
+      }
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
       this.setDefaultUserInfo()
     }
   },
@@ -74,7 +87,7 @@ Page({
   },
 
   // 选择头像 - 使用微信小程序最新API
-  onChooseAvatar(e) {
+  async onChooseAvatar(e) {
     console.log('选择头像事件:', e.detail)
     const { avatarUrl } = e.detail
     
@@ -83,43 +96,24 @@ Page({
       return
     }
     
-    const currentUserInfo = this.data.userInfo || {}
-    const newUserInfo = {
-      ...currentUserInfo,
-      avatarUrl: avatarUrl
-    }
-    
-    // 保存用户信息到本地存储
-    const saveResult = Storage.saveUserInfo(newUserInfo)
-    console.log('保存用户信息结果:', saveResult)
-    
-    // 更新全局用户信息
-    const app = getApp()
-    app.setUserInfo(newUserInfo)
-    
-    this.setData({ userInfo: newUserInfo })
-    
-    wx.showToast({
-      title: '头像更新成功',
-      icon: 'success'
-    })
-  },
-
-  // 昵称输入完成 - 使用最新的输入处理方式
-  onNicknameChange(e) {
-    const nickName = e.detail.value.trim()
-    console.log('昵称输入:', nickName)
-    
-    if (nickName && nickName.length > 0) {
+    try {
+      // 上传头像到云存储
+      const uploadResult = await CloudApi.uploadFile(avatarUrl, 'avatar.jpg', 'avatar')
+      if (!uploadResult.success) {
+        throw new Error('头像上传失败')
+      }
+      
       const currentUserInfo = this.data.userInfo || {}
       const newUserInfo = {
         ...currentUserInfo,
-        nickName: nickName
+        avatarUrl: uploadResult.data.fileID
       }
       
-      // 保存用户信息到本地存储
-      const saveResult = Storage.saveUserInfo(newUserInfo)
-      console.log('保存用户信息结果:', saveResult)
+      // 保存用户信息到云数据库
+      const saveResult = await CloudApi.saveUserInfo(newUserInfo)
+      if (!saveResult.success) {
+        throw new Error('用户信息保存失败')
+      }
       
       // 更新全局用户信息
       const app = getApp()
@@ -128,9 +122,54 @@ Page({
       this.setData({ userInfo: newUserInfo })
       
       wx.showToast({
-        title: '昵称保存成功',
+        title: '头像更新成功',
         icon: 'success'
       })
+    } catch (error) {
+      console.error('头像更新失败:', error)
+      wx.showToast({
+        title: '头像更新失败，请重试',
+        icon: 'none'
+      })
+    }
+  },
+
+  // 昵称输入完成 - 使用最新的输入处理方式
+  async onNicknameChange(e) {
+    const nickName = e.detail.value.trim()
+    console.log('昵称输入:', nickName)
+    
+    if (nickName && nickName.length > 0) {
+      try {
+        const currentUserInfo = this.data.userInfo || {}
+        const newUserInfo = {
+          ...currentUserInfo,
+          nickName: nickName
+        }
+        
+        // 保存用户信息到云数据库
+        const saveResult = await CloudApi.saveUserInfo(newUserInfo)
+        if (!saveResult.success) {
+          throw new Error('昵称保存失败')
+        }
+        
+        // 更新全局用户信息
+        const app = getApp()
+        app.setUserInfo(newUserInfo)
+        
+        this.setData({ userInfo: newUserInfo })
+        
+        wx.showToast({
+          title: '昵称保存成功',
+          icon: 'success'
+        })
+      } catch (error) {
+        console.error('昵称保存失败:', error)
+        wx.showToast({
+          title: '昵称保存失败，请重试',
+          icon: 'none'
+        })
+      }
     }
   },
 
@@ -146,19 +185,24 @@ Page({
   },
 
   // 检查今日是否已有记录
-  checkTodayRecord() {
-    const todayRecord = Storage.getCheckinByDate(this.data.currentDate)
-    if (todayRecord) {
-      // 如果今日已有记录，加载数据
-      this.setData({
-        questions: todayRecord.questions || [''],
-        videoInfo: {
-          url: todayRecord.videoUrl || '',
-          cover: todayRecord.videoCover || ''
-        },
-        diary: todayRecord.diary || '',
-        images: todayRecord.images || []
-      })
+  async checkTodayRecord() {
+    try {
+      const result = await CloudApi.getCheckinByDate(this.data.currentDate)
+      if (result.success && result.data) {
+        const todayRecord = result.data
+        // 如果今日已有记录，加载数据
+        this.setData({
+          questions: todayRecord.questions || [''],
+          videoInfo: {
+            url: todayRecord.videoUrl || '',
+            cover: todayRecord.videoCover || ''
+          },
+          diary: todayRecord.diary || '',
+          images: todayRecord.images || []
+        })
+      }
+    } catch (error) {
+      console.error('检查今日记录失败:', error)
     }
   },
 
@@ -362,22 +406,39 @@ Page({
     }
   },
 
-  uploadImages(filePaths) {
-    wx.showLoading({ title: '处理图片中...' })
+  async uploadImages(filePaths) {
+    wx.showLoading({ title: '上传图片中...' })
     
-    // 模拟图片处理和上传
-    setTimeout(() => {
-      // 直接使用本地临时路径（实际项目中应该上传到服务器）
+    try {
+      const uploadPromises = filePaths.map(async (filePath, index) => {
+        const fileName = `image_${Date.now()}_${index}.jpg`
+        const result = await CloudApi.uploadFile(filePath, fileName, 'images')
+        if (result.success) {
+          return result.data.fileID
+        } else {
+          throw new Error(`图片${index + 1}上传失败`)
+        }
+      })
+      
+      const uploadedFileIDs = await Promise.all(uploadPromises)
+      
       this.setData({
-        images: [...this.data.images, ...filePaths]
+        images: [...this.data.images, ...uploadedFileIDs]
       })
       
       wx.hideLoading()
       wx.showToast({
-        title: '图片添加成功',
+        title: '图片上传成功',
         icon: 'success'
       })
-    }, 1000)
+    } catch (error) {
+      console.error('图片上传失败:', error)
+      wx.hideLoading()
+      wx.showToast({
+        title: '图片上传失败，请重试',
+        icon: 'none'
+      })
+    }
   },
 
   deleteImage(e) {
@@ -395,7 +456,7 @@ Page({
   },
 
   // 提交打卡
-  submitCheckin() {
+  async submitCheckin() {
     // 验证必填项
     const validQuestions = this.data.questions.filter(q => q.trim())
     if (validQuestions.length === 0) {
@@ -416,34 +477,53 @@ Page({
 
     this.setData({ submitting: true })
 
-    const data = {
-      date: this.data.currentDate,
-      questions: validQuestions,
-      videoUrl: this.data.videoInfo.url,
-      videoCover: this.data.videoInfo.cover,
-      diary: this.data.diary,
-      images: this.data.images
-    }
+    try {
+      // 如果有视频，先上传视频
+      let videoFileID = ''
+      if (this.data.videoInfo.url) {
+        wx.showLoading({ title: '上传视频中...' })
+        const videoResult = await CloudApi.uploadFile(
+          this.data.videoInfo.url, 
+          `video_${Date.now()}.mp4`, 
+          'videos'
+        )
+        if (videoResult.success) {
+          videoFileID = videoResult.data.fileID
+        }
+        wx.hideLoading()
+      }
 
-    // 保存到本地存储
-    const result = Storage.saveCheckinRecord(data)
-    
-    setTimeout(() => {
+      const data = {
+        questions: validQuestions,
+        videoUrl: videoFileID,
+        videoCover: this.data.videoInfo.cover,
+        diary: this.data.diary,
+        images: this.data.images
+      }
+
+      // 保存到云数据库
+      const result = await CloudApi.saveCheckin(data)
+      
       if (result.success) {
         this.showSuccessToast()
         this.clearDraft()
         
-        // 更新统计数据
-        const stats = Storage.getStatistics()
-        console.log('更新后的统计数据:', stats)
-      } else {
         wx.showToast({
-          title: '保存失败，请重试',
-          icon: 'error'
+          title: '打卡成功',
+          icon: 'success'
         })
+      } else {
+        throw new Error(result.message || '保存失败')
       }
+    } catch (error) {
+      console.error('提交打卡失败:', error)
+      wx.showToast({
+        title: '提交失败，请重试',
+        icon: 'error'
+      })
+    } finally {
       this.setData({ submitting: false })
-    }, 1000)
+    }
   },
 
   // 显示成功提示

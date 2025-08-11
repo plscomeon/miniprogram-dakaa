@@ -1,5 +1,5 @@
 // 打卡记录页面逻辑
-const Storage = require('../../utils/storage.js')
+const CloudApi = require('../../utils/cloudApi.js')
 
 Page({
   data: {
@@ -54,74 +54,72 @@ Page({
   },
 
   // 加载统计数据
-  loadStatistics() {
+  async loadStatistics() {
     try {
-      const stats = Storage.getStatistics()
-      
-      // 计算本月天数
-      const { currentYear, currentMonth } = this.data
-      const allRecords = Storage.getCheckinRecords()
-      const monthRecords = allRecords.filter(record => {
-        const recordDate = new Date(record.date)
-        return recordDate.getFullYear() === currentYear && 
-               recordDate.getMonth() + 1 === currentMonth
-      })
-      
-      this.setData({
-        totalDays: stats.totalDays,
-        streakDays: stats.streakDays,
-        monthDays: monthRecords.length
-      })
+      const result = await CloudApi.getStats()
+      if (result.success) {
+        const stats = result.data
+        this.setData({
+          totalDays: stats.totalDays,
+          streakDays: stats.consecutiveDays,
+          monthDays: stats.monthlyDays
+        })
+      }
     } catch (error) {
       console.error('加载统计数据失败:', error)
     }
   },
 
   // 加载记录列表
-  loadRecords() {
+  async loadRecords() {
     try {
       const { currentYear, currentMonth } = this.data
-      const allRecords = Storage.getCheckinRecords()
       
-      // 筛选当前月份的记录
-      const monthRecords = allRecords.filter(record => {
-        const recordDate = new Date(record.date)
-        return recordDate.getFullYear() === currentYear && 
-               recordDate.getMonth() + 1 === currentMonth
+      // 获取当前月份的记录
+      const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`
+      const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-31`
+      
+      const result = await CloudApi.getCheckinRecords({
+        startDate,
+        endDate
       })
       
-      // 格式化记录数据
-      const formattedRecords = monthRecords.map(record => {
-        const date = new Date(record.date)
-        const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
+      if (result.success) {
+        const allRecords = result.data
         
-        // 生成摘要
-        let summary = ''
-        if (record.questions && record.questions.length > 0) {
-          summary += `${record.questions.length}个问题`
-        }
-        if (record.videoUrl) {
-          summary += summary ? '，视频讲解' : '视频讲解'
-        }
-        if (record.diary) {
-          const diaryPreview = record.diary.length > 20 ? 
-            record.diary.substring(0, 20) + '...' : record.diary
-          summary += summary ? `，${diaryPreview}` : diaryPreview
-        }
+        // 格式化记录数据
+        const formattedRecords = allRecords.map(record => {
+          const date = new Date(record.date)
+          const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]
+          
+          // 生成摘要
+          let summary = ''
+          if (record.questions && record.questions.length > 0) {
+            summary += `${record.questions.length}个问题`
+          }
+          if (record.videoUrl) {
+            summary += summary ? '，视频讲解' : '视频讲解'
+          }
+          if (record.diary) {
+            const diaryPreview = record.diary.length > 20 ? 
+              record.diary.substring(0, 20) + '...' : record.diary
+            summary += summary ? `，${diaryPreview}` : diaryPreview
+          }
+          
+          return {
+            id: record._id,
+            date: record.date,
+            dayOfWeek,
+            preview: record.questions && record.questions.length > 0,
+            video: !!record.videoUrl,
+            diary: !!record.diary,
+            summary: summary || '打卡记录'
+          }
+        })
         
-        return {
-          id: record.id,
-          date: record.date,
-          dayOfWeek,
-          preview: record.questions && record.questions.length > 0,
-          video: !!record.videoUrl,
-          diary: !!record.diary,
-          summary: summary || '打卡记录'
-        }
-      })
-      
-      this.setData({ records: formattedRecords })
-      this.generateCalendar() // 重新生成日历以显示打卡标记
+        this.setData({ records: formattedRecords })
+        this.generateCalendar() // 重新生成日历以显示打卡标记
+      }
     } catch (error) {
       console.error('加载记录失败:', error)
       wx.showToast({
@@ -221,27 +219,10 @@ Page({
   // 查看记录详情
   viewRecord(e) {
     const { id } = e.currentTarget.dataset
-    try {
-      const allRecords = Storage.getCheckinRecords()
-      const record = allRecords.find(r => r.id === id)
-      if (record) {
-        // 跳转到记录详情页面
-        wx.navigateTo({
-          url: `/pages/record-detail/record-detail?id=${id}`
-        })
-      } else {
-        wx.showToast({
-          title: '记录不存在',
-          icon: 'error'
-        })
-      }
-    } catch (error) {
-      console.error('查看记录失败:', error)
-      wx.showToast({
-        title: '查看记录失败',
-        icon: 'error'
-      })
-    }
+    // 跳转到记录详情页面
+    wx.navigateTo({
+      url: `/pages/record-detail/record-detail?id=${id}`
+    })
   },
 
   // 上一月
