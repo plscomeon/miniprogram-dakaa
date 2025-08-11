@@ -1,5 +1,5 @@
 // app.js
-const Storage = require('./utils/storage.js');
+const CloudApi = require('./utils/cloudApi.js');
 
 App({
   onLaunch: function () {
@@ -27,9 +27,9 @@ App({
   },
 
   // 检查用户登录状态
-  checkUserLogin: function() {
+  checkUserLogin: async function() {
     try {
-      const userInfo = Storage.getUserInfo();
+      const userInfo = await CloudApi.getUserInfo();
       if (userInfo && userInfo.nickName) {
         this.globalData.userInfo = userInfo;
         this.globalData.isLoggedIn = true;
@@ -45,11 +45,15 @@ App({
   },
 
   // 设置用户信息
-  setUserInfo: function(userInfo) {
+  setUserInfo: async function(userInfo) {
     this.globalData.userInfo = userInfo;
     this.globalData.isLoggedIn = true;
-    Storage.setUserInfo(userInfo);
-    console.log('用户信息已更新:', userInfo);
+    try {
+      await CloudApi.saveUserInfo(userInfo);
+      console.log('用户信息已更新:', userInfo);
+    } catch (error) {
+      console.error('保存用户信息失败:', error);
+    }
   },
 
   // 获取用户信息
