@@ -88,6 +88,8 @@ Page({
 
   // 获取微信用户信息 - 只能在用户点击时调用
   getUserInfo() {
+    console.log('开始获取用户信息...')
+    
     wx.getUserProfile({
       desc: '用于完善用户资料',
       success: async (res) => {
@@ -96,14 +98,17 @@ Page({
         try {
           const userInfo = {
             nickName: res.userInfo.nickName,
-            avatarUrl: res.userInfo.avatarUrl,
-            openid: wx.getStorageSync('openid') || ''
+            avatarUrl: res.userInfo.avatarUrl
           }
+          
+          console.log('准备保存用户信息:', userInfo)
           
           // 保存用户信息到云数据库
           const saveResult = await CloudApi.saveUserInfo(userInfo)
+          console.log('保存用户信息结果:', saveResult)
+          
           if (!saveResult.success) {
-            throw new Error('用户信息保存失败')
+            throw new Error(saveResult.message || '用户信息保存失败')
           }
           
           // 更新全局用户信息
@@ -112,6 +117,8 @@ Page({
           
           this.setData({ userInfo: userInfo })
           
+          console.log('用户信息设置完成:', userInfo)
+          
           wx.showToast({
             title: '登录成功',
             icon: 'success'
@@ -119,16 +126,18 @@ Page({
         } catch (error) {
           console.error('保存用户信息失败:', error)
           wx.showToast({
-            title: '登录失败，请重试',
-            icon: 'none'
+            title: `登录失败：${error.message}`,
+            icon: 'none',
+            duration: 3000
           })
         }
       },
       fail: (err) => {
         console.error('获取用户信息失败:', err)
         wx.showToast({
-          title: '获取用户信息失败',
-          icon: 'none'
+          title: `获取用户信息失败：${err.errMsg}`,
+          icon: 'none',
+          duration: 3000
         })
       }
     })

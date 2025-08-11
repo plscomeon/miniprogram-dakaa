@@ -29,11 +29,14 @@ App({
   // 检查用户登录状态
   checkUserLogin: async function() {
     try {
-      const userInfo = await CloudApi.getUserInfo();
-      if (userInfo && userInfo.nickName) {
-        this.globalData.userInfo = userInfo;
+      console.log('开始检查用户登录状态...');
+      const result = await CloudApi.getUserInfo();
+      console.log('获取用户信息结果:', result);
+      
+      if (result.success && result.data && result.data.nickName) {
+        this.globalData.userInfo = result.data;
         this.globalData.isLoggedIn = true;
-        console.log('用户已登录:', userInfo);
+        console.log('用户已登录:', result.data);
       } else {
         this.globalData.isLoggedIn = false;
         console.log('用户未登录');
@@ -45,15 +48,10 @@ App({
   },
 
   // 设置用户信息
-  setUserInfo: async function(userInfo) {
+  setUserInfo: function(userInfo) {
     this.globalData.userInfo = userInfo;
     this.globalData.isLoggedIn = true;
-    try {
-      await CloudApi.saveUserInfo(userInfo);
-      console.log('用户信息已更新:', userInfo);
-    } catch (error) {
-      console.error('保存用户信息失败:', error);
-    }
+    console.log('全局用户信息已更新:', userInfo);
   },
 
   // 获取用户信息
