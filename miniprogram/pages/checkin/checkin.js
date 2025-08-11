@@ -29,7 +29,7 @@ Page({
 
   onShow() {
     // 每次显示页面时检查用户信息更新
-    this.getUserInfo()
+    this.loadUserInfo()
     this.loadDraft()
     this.checkTodayRecord()
   },
@@ -50,11 +50,11 @@ Page({
     })
 
     // 获取用户信息
-    this.getUserInfo()
+    this.loadUserInfo()
   },
 
   // 获取用户信息
-  async getUserInfo() {
+  async loadUserInfo() {
     try {
       const result = await CloudApi.getUserInfo()
       if (result.success && result.data) {
@@ -86,7 +86,7 @@ Page({
     this.setData({ userInfo: defaultUserInfo })
   },
 
-  // 获取微信用户信息 - 使用微信小程序官方API
+  // 获取微信用户信息 - 只能在用户点击时调用
   getUserInfo() {
     wx.getUserProfile({
       desc: '用于完善用户资料',
