@@ -3,7 +3,7 @@
   <view class="content-container">
     <!-- 顶部状态栏 -->
     <view class="status-bar">
-      <view class="user-info" wx:if="{{userInfo.nickName}}" bindtap="onAvatarTap">
+      <view class="user-info" wx:if="{{userInfo.nickName && userInfo.nickName !== ''}}" bindtap="onAvatarTap">
         <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
         <text class="username">{{userInfo.nickName}}</text>
       </view>

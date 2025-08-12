@@ -56,18 +56,24 @@ Page({
   // 获取用户信息
   async loadUserInfo() {
     try {
+      console.log('开始加载用户信息...')
       const result = await CloudApi.getUserInfo()
-      if (result.success && result.data) {
+      console.log('云函数返回结果:', result)
+      
+      if (result.success && result.data && result.data.nickName) {
         const userInfo = {
-          nickName: result.data.nickName || '',
+          nickName: result.data.nickName,
           avatarUrl: result.data.avatarUrl || '/images/default-avatar.png'
         }
+        console.log('设置用户信息:', userInfo)
         this.setData({ userInfo })
         
         // 更新全局用户信息
         const app = getApp()
         app.setUserInfo(userInfo)
+        console.log('用户信息加载成功')
       } else {
+        console.log('用户信息不存在，设置默认信息')
         // 设置默认用户信息，引导用户完善
         this.setDefaultUserInfo()
       }
@@ -75,6 +81,15 @@ Page({
       console.error('获取用户信息失败:', error)
       this.setDefaultUserInfo()
     }
+  },
+  // 设置默认用户信息
+  setDefaultUserInfo() {
+    const defaultUserInfo = {
+      nickName: '',
+      avatarUrl: '/images/default-avatar.png'
+    }
+    console.log('设置默认用户信息:', defaultUserInfo)
+    this.setData({ userInfo: defaultUserInfo })
   },
 
   // 设置默认用户信息
@@ -111,13 +126,20 @@ Page({
             throw new Error(saveResult.message || '用户信息保存失败')
           }
           
+          // 立即更新页面显示的用户信息
+          this.setData({ 
+            userInfo: {
+              nickName: userInfo.nickName,
+              avatarUrl: userInfo.avatarUrl
+            }
+          })
+          
           // 更新全局用户信息
           const app = getApp()
           app.setUserInfo(userInfo)
           
-          this.setData({ userInfo: userInfo })
-          
           console.log('用户信息设置完成:', userInfo)
+          console.log('页面数据已更新:', this.data.userInfo)
           
           wx.showToast({
             title: '登录成功',
