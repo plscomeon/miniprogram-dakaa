@@ -4,7 +4,11 @@ const CloudApi = require('../../utils/cloudApi.js')
 Page({
   data: {
     currentDate: '',
-    userInfo: {},
+    userInfo: {}, // 保存正式的用户信息（包含云存储FileID）
+    isLogin: false, // 登录状态
+    tempAvatarUrl: '', // 临时本地头像路径
+    tempNickName: '', // 临时昵称
+    showLoginModal: false, // 登录弹窗显示状态
     questions: [''],
     videoInfo: {
       url: '',
@@ -18,151 +22,132 @@ Page({
   },
 
   onLoad() {
-    // 检查全局登录状态
-    const app = getApp()
-    if (!app.isUserLoggedIn()) {
-      console.log('用户未登录，显示默认信息')
-    }
-    
-    this.initPage()
+    this.updateDate(); // 更新日期显示
   },
 
   onShow() {
-    // 每次显示页面时检查用户信息更新
-    this.loadUserInfo()
-    this.loadDraft()
-    this.checkTodayRecord()
+    // 每次进入页面，都从全局app.js同步最新的登录状态
+    this.syncLoginStatus();
+    // 如果已登录，则加载今天的打卡记录
+    if (this.data.isLogin) {
+      this.loadDraft();
+      this.checkTodayRecord();
+    }
   },
 
   onHide() {
-    this.saveDraft()
+    // 如果已登录，则保存草稿
+    if (this.data.isLogin) {
+      this.saveDraft();
+    }
   },
 
-  // 初始化页面
-  initPage() {
-    // 设置当前日期
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
+  // 同步全局登录状态到当前页面
+  syncLoginStatus() {
+    const app = getApp();
+    this.setData({
+      isLogin: app.globalData.isUserLoggedIn,
+      userInfo: app.globalData.userInfo
+    });
+    console.log('Checkin Page: Synced login status - ', this.data.isLogin);
+  },
+
+  // 显示登录弹窗
+  showLoginModal() {
+    this.setData({ showLoginModal: true });
+  },
+
+  // 隐藏登录弹窗
+  hideLoginModal() {
+    this.setData({ showLoginModal: false });
+  },
+
+  // 更新日期显示
+  updateDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
     this.setData({
       currentDate: `${year}-${month}-${day}`
-    })
-
-    // 获取用户信息
-    this.loadUserInfo()
+    });
   },
 
-  // 获取用户信息
-  async loadUserInfo() {
+  // --- 新版登录逻辑 ---
+
+  // 1. 用户选择头像
+  onChooseAvatar(e) {
+    const { avatarUrl } = e.detail;
+    this.setData({
+      tempAvatarUrl: avatarUrl,
+    });
+    console.log('Temp avatar selected:', avatarUrl);
+  },
+
+  // 2. 用户输入昵称
+  onNicknameChange(e) {
+    this.setData({
+      tempNickName: e.detail.value.trim(),
+    });
+  },
+
+  // 3. 用户点击授权登录按钮
+  async submitUserInfo() {
+    if (this.data.submitting) return;
+
+    if (!this.data.tempAvatarUrl) {
+      wx.showToast({ title: '请选择头像', icon: 'none' });
+      return;
+    }
+    if (!this.data.tempNickName) {
+      wx.showToast({ title: '请输入昵称', icon: 'none' });
+      return;
+    }
+
+    this.setData({ submitting: true });
+    wx.showLoading({ title: '登录中...' });
+
     try {
-      console.log('开始加载用户信息...')
-      const result = await CloudApi.getUserInfo()
-      console.log('云函数返回结果:', result)
-      
-      if (result.success && result.data && result.data.nickName) {
-        const userInfo = {
-          nickName: result.data.nickName,
-          avatarUrl: result.data.avatarUrl || '/images/default-avatar.png'
-        }
-        console.log('设置用户信息:', userInfo)
-        this.setData({ userInfo })
-        
-        // 更新全局用户信息
-        const app = getApp()
-        app.setUserInfo(userInfo)
-        console.log('用户信息加载成功')
-      } else {
-        console.log('用户信息不存在，设置默认信息')
-        // 设置默认用户信息，引导用户完善
-        this.setDefaultUserInfo()
+      // a. 上传头像到云存储，获取永久FileID
+      const uploadResult = await CloudApi.uploadFile(this.data.tempAvatarUrl, `avatar_${Date.now()}.jpg`, 'avatars');
+      if (!uploadResult.success) {
+        throw new Error('头像上传失败');
       }
+      const avatarFileID = uploadResult.data.fileID;
+
+      // b. 准备用户信息（包含FileID）
+      const userInfoToSave = {
+        nickName: this.data.tempNickName,
+        avatarUrl: avatarFileID,
+      };
+
+      // c. 保存用户信息到云数据库
+      const saveResult = await CloudApi.saveUserInfo(userInfoToSave);
+      if (!saveResult.success) {
+        throw new Error('用户信息保存失败');
+      }
+
+      // d. 更新全局和页面数据
+      const app = getApp();
+      app.setUserInfo(saveResult.data); // 调用全局方法更新
+
+      this.setData({
+        userInfo: saveResult.data,
+        isLogin: true,
+        showLoginModal: false, // 关闭登录弹窗
+        tempAvatarUrl: '', // 清空临时数据
+        tempNickName: ''
+      });
+
+      wx.showToast({ title: '登录成功', icon: 'success' });
+
     } catch (error) {
-      console.error('获取用户信息失败:', error)
-      this.setDefaultUserInfo()
+      console.error('登录失败:', error);
+      wx.showToast({ title: error.message || '登录失败，请重试', icon: 'none' });
+    } finally {
+      this.setData({ submitting: false });
+      wx.hideLoading();
     }
-  },
-  // 设置默认用户信息
-  setDefaultUserInfo() {
-    const defaultUserInfo = {
-      nickName: '',
-      avatarUrl: '/images/default-avatar.png'
-    }
-    console.log('设置默认用户信息:', defaultUserInfo)
-    this.setData({ userInfo: defaultUserInfo })
-  },
-
-  // 设置默认用户信息
-  setDefaultUserInfo() {
-    const defaultUserInfo = {
-      nickName: '',
-      avatarUrl: '/images/default-avatar.png'
-    }
-    this.setData({ userInfo: defaultUserInfo })
-  },
-
-  // 获取微信用户信息 - 只能在用户点击时调用
-  getUserInfo() {
-    console.log('开始获取用户信息...')
-    
-    wx.getUserProfile({
-      desc: '用于完善用户资料',
-      success: async (res) => {
-        console.log('获取用户信息成功:', res)
-        
-        try {
-          const userInfo = {
-            nickName: res.userInfo.nickName,
-            avatarUrl: res.userInfo.avatarUrl
-          }
-          
-          console.log('准备保存用户信息:', userInfo)
-          
-          // 保存用户信息到云数据库
-          const saveResult = await CloudApi.saveUserInfo(userInfo)
-          console.log('保存用户信息结果:', saveResult)
-          
-          if (!saveResult.success) {
-            throw new Error(saveResult.message || '用户信息保存失败')
-          }
-          
-          // 立即更新页面显示的用户信息
-          this.setData({ 
-            userInfo: {
-              nickName: userInfo.nickName,
-              avatarUrl: userInfo.avatarUrl
-            }
-          })
-          
-          // 更新全局用户信息
-          const app = getApp()
-          app.setUserInfo(userInfo)
-          
-          console.log('用户信息设置完成:', userInfo)
-          console.log('页面数据已更新:', this.data.userInfo)
-          
-          wx.showToast({
-            title: '登录成功',
-            icon: 'success'
-          })
-        } catch (error) {
-          console.error('保存用户信息失败:', error)
-          wx.showToast({
-            title: `登录失败：${error.message}`,
-            icon: 'none',
-            duration: 3000
-          })
-        }
-      },
-      fail: (err) => {
-        console.error('获取用户信息失败:', err)
-        wx.showToast({
-          title: `获取用户信息失败：${err.errMsg}`,
-          icon: 'none',
-          duration: 3000
-        })
-      }
-    })
   },
 
   // 检查今日是否已有记录
@@ -438,6 +423,23 @@ Page({
 
   // 提交打卡
   async submitCheckin() {
+    // 首先检查登录状态
+    if (!this.data.isLogin) {
+      wx.showModal({
+        title: '需要登录',
+        content: '请先登录后再提交打卡',
+        showCancel: true,
+        cancelText: '取消',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            this.showLoginModal();
+          }
+        }
+      });
+      return;
+    }
+
     // 验证必填项
     const validQuestions = this.data.questions.filter(q => q.trim())
     if (validQuestions.length === 0) {

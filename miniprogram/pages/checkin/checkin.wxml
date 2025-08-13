@@ -1,32 +1,50 @@
 <!--pages/checkin/checkin.wxml-->
 <view class="page-container">
-  <view class="content-container">
-    <!-- 顶部状态栏 -->
-    <view class="status-bar">
-      <view class="user-info" wx:if="{{userInfo.nickName && userInfo.nickName !== ''}}" bindtap="onAvatarTap">
-        <image class="avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
-        <text class="username">{{userInfo.nickName}}</text>
-      </view>
-      <view class="user-info" wx:else>
-        <image class="avatar" src="/images/default-avatar.png" mode="aspectFill"></image>
-        <button class="login-btn" bindtap="getUserInfo">获取微信用户信息</button>
-      </view>
-      <view class="date-info">
-        <text class="date">{{currentDate}}</text>
-      </view>
+  <!-- 固定顶部登录栏 -->
+  <view class="header-bar">
+    <view class="user-section" wx:if="{{isLogin}}" bindtap="onAvatarTap">
+      <image class="user-avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+      <text class="user-name">{{userInfo.nickName}}</text>
     </view>
+    <view class="login-section" wx:else>
+      <button class="login-btn" bindtap="showLoginModal">点击登录</button>
+    </view>
+    <view class="date-section">
+      <text class="current-date">{{currentDate}}</text>
+    </view>
+  </view>
 
-    <!-- 用户菜单 -->
-    <view class="user-menu" wx:if="{{showUserMenu}}" bindtap="hideUserMenu">
-      <view class="menu-content" catchtap="">
-        <view class="menu-item" bindtap="goToProfile">
-          <text>个人中心</text>
-        </view>
-        <view class="menu-item" bindtap="logout">
-          <text>退出登录</text>
-        </view>
+  <!-- 登录弹窗 -->
+  <view class="login-modal" wx:if="{{showLoginModal}}" bindtap="hideLoginModal">
+    <view class="modal-content" catchtap="">
+      <view class="modal-header">
+        <text class="modal-title">授权登录</text>
+        <view class="modal-close" bindtap="hideLoginModal">×</view>
+      </view>
+      <view class="modal-body">
+        <button class="avatar-selector" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+          <image class="temp-avatar" src="{{tempAvatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+          <text class="avatar-tip">点击选择头像</text>
+        </button>
+        <input class="nickname-input" type="nickname" placeholder="点击输入框自动填充昵称" bind:blur="onNicknameChange" value="{{tempNickName}}" />
+        <button class="confirm-login-btn" bindtap="submitUserInfo">确认登录</button>
       </view>
     </view>
+  </view>
+
+  <!-- 用户菜单 -->
+  <view class="user-menu" wx:if="{{showUserMenu}}" bindtap="hideUserMenu">
+    <view class="menu-content" catchtap="">
+      <view class="menu-item" bindtap="goToProfile">
+        <text>个人中心</text>
+      </view>
+      <view class="menu-item" bindtap="logout">
+        <text>退出登录</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="content-container">
 
     <!-- 打卡模块 -->
     <view class="checkin-modules">
