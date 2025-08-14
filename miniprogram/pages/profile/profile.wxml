@@ -203,34 +203,90 @@
       <button class="modal-close" bindtap="hidePhoneUsageModal">×</button>
     </view>
     <view class="modal-body">
-      <view class="usage-summary">
-        <text class="summary-title">当前可用时长</text>
-        <text class="summary-value">{{formatTime(phoneUsageRights)}}</text>
+      <!-- 状态卡片 -->
+      <view class="status-card">
+        <view class="status-header">
+          <text class="status-icon">📱</text>
+          <view class="status-info">
+            <text class="status-title">手机使用状态</text>
+            <text class="status-subtitle" style="color: {{statusColor}}">{{statusText}}</text>
+          </view>
+        </view>
+        <view class="status-time">
+          <text class="time-label">可用时长</text>
+          <text class="time-value">{{formattedUsageRights}}</text>
+        </view>
       </view>
-      
-      <view class="usage-options">
-        <text class="options-title">选择使用时长</text>
-        <view class="option-buttons">
-          <button class="usage-option-btn" bindtap="usePhoneTime" data-minutes="15">
-            使用15分钟
+
+      <!-- 快速使用按钮 -->
+      <view class="quick-usage" wx:if="{{!isPhoneRecovered}}">
+        <text class="section-title">⚡ 快速使用</text>
+        <view class="usage-grid">
+          <button class="usage-btn small" bindtap="usePhoneTime" data-minutes="15" 
+                  disabled="{{phoneUsageRights < 15}}">
+            <text class="btn-time">15分钟</text>
+            <text class="btn-desc">短暂休息</text>
           </button>
-          <button class="usage-option-btn" bindtap="usePhoneTime" data-minutes="30">
-            使用30分钟
+          <button class="usage-btn small" bindtap="usePhoneTime" data-minutes="30" 
+                  disabled="{{phoneUsageRights < 30}}">
+            <text class="btn-time">30分钟</text>
+            <text class="btn-desc">娱乐时间</text>
           </button>
-          <button class="usage-option-btn" bindtap="usePhoneTime" data-minutes="60">
-            使用1小时
+          <button class="usage-btn large" bindtap="usePhoneTime" data-minutes="60" 
+                  disabled="{{phoneUsageRights < 60}}">
+            <text class="btn-time">1小时</text>
+            <text class="btn-desc">自由使用</text>
           </button>
-          <button class="usage-option-btn" bindtap="usePhoneTime" data-minutes="120">
-            使用2小时
+          <button class="usage-btn large" bindtap="usePhoneTime" data-minutes="120" 
+                  disabled="{{phoneUsageRights < 120}}">
+            <text class="btn-time">2小时</text>
+            <text class="btn-desc">长时间使用</text>
           </button>
         </view>
       </view>
+
+      <!-- 回收状态提示 -->
+      <view class="recovery-notice" wx:if="{{isPhoneRecovered}}">
+        <text class="notice-icon">🚫</text>
+        <view class="notice-content">
+          <text class="notice-title">手机已被回收</text>
+          <text class="notice-desc">还需等待 {{phoneRecoveryDays}} 天才能使用</text>
+          <text class="notice-tip">坚持打卡可以避免手机被回收</text>
+        </view>
+      </view>
+
+      <!-- 使用统计 -->
+      <view class="usage-stats" wx:if="{{syncResult}}">
+        <text class="section-title">📊 使用统计</text>
+        <view class="stats-grid">
+          <view class="stat-item">
+            <text class="stat-value">{{formatTime(syncResult.shouldHave)}}</text>
+            <text class="stat-label">总获得</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-value">{{formatTime(syncResult.used)}}</text>
+            <text class="stat-label">已使用</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-value">{{formatTime(syncResult.penalty)}}</text>
+            <text class="stat-label">被扣除</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-value">{{formatTime(syncResult.available)}}</text>
+            <text class="stat-label">可使用</text>
+          </view>
+        </view>
+      </view>
       
+      <!-- 使用提示 -->
       <view class="usage-tips">
-        <text class="tips-title">💡 使用提示</text>
-        <text class="tips-text">• 使用时长会从总时长中扣除</text>
-        <text class="tips-text">• 手机回收期间无法使用</text>
-        <text class="tips-text">• 坚持打卡获得更多使用权</text>
+        <text class="tips-title">💡 使用说明</text>
+        <view class="tips-list">
+          <text class="tips-item">• 每天打卡获得1小时使用权</text>
+          <text class="tips-item">• 连续7天额外获得2小时</text>
+          <text class="tips-item">• 忘记打卡会被扣除使用权</text>
+          <text class="tips-item">• 使用时长实时从余额中扣除</text>
+        </view>
       </view>
     </view>
   </view>

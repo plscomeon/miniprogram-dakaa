@@ -74,16 +74,26 @@ Page({
 
   // 更新奖励系统数据到页面
   updateRewardSystemData() {
+    // 同步用户统计数据到奖励系统
+    const syncResult = this.rewardSystem.syncWithUserStats(this.data.totalDays, this.data.streakDays);
+    
     const status = this.rewardSystem.getCurrentStatus();
     const rewardHistory = this.rewardSystem.getRewardHistory();
     const penaltyHistory = this.rewardSystem.getPenaltyHistory();
+    
+    console.log('奖励系统同步结果:', syncResult);
+    console.log('当前状态:', status);
     
     this.setData({
       phoneUsageRights: status.phoneUsageRights,
       phoneRecoveryDays: status.phoneRecoveryDays,
       isPhoneRecovered: status.isPhoneRecovered,
       rewardHistory: rewardHistory.slice(0, 5), // 只显示最近5条
-      penaltyHistory: penaltyHistory.slice(0, 5)
+      penaltyHistory: penaltyHistory.slice(0, 5),
+      formattedUsageRights: this.formatTime(status.phoneUsageRights),
+      statusColor: this.getStatusColor(status.isPhoneRecovered),
+      statusText: this.getStatusText(status.isPhoneRecovered, status.phoneRecoveryDays),
+      syncResult: syncResult // 用于调试显示
     });
   },
 
@@ -257,6 +267,8 @@ Page({
       wx.hideLoading()
       // 更新成就进度
       this.updateAchievements()
+      // 更新奖励系统数据
+      this.updateRewardSystemData()
     } catch (error) {
       console.error('Profile页面：加载统计数据失败:', error)
       wx.hideLoading()

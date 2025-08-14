@@ -119,6 +119,65 @@ class RewardSystem {
     this.showRewardNotification()
   }
 
+  // 根据用户打卡天数计算总可用时长
+  calculateTotalUsageRights(totalDays, streakDays) {
+    let totalRights = 0
+    
+    // 基础奖励：每天打卡获得1小时
+    totalRights += totalDays * 60
+    
+    // 连续打卡奖励（不重复计算）
+    if (streakDays >= 100) {
+      // 100天奖励：额外10小时（只计算一次）
+      totalRights += 600
+    } else if (streakDays >= 30) {
+      // 30天奖励：额外5小时（只计算一次）
+      totalRights += 300
+    } else if (streakDays >= 7) {
+      // 7天奖励：额外2小时（只计算一次）
+      totalRights += 120
+    }
+    
+    return totalRights
+  }
+
+  // 同步用户打卡数据并重新计算可用时长
+  syncWithUserStats(totalDays, streakDays) {
+    // 计算应该拥有的总时长
+    const shouldHaveRights = this.calculateTotalUsageRights(totalDays, streakDays)
+    
+    // 计算已使用的时长（从历史记录中计算）
+    const usedRights = this.calculateUsedRights()
+    
+    // 计算被惩罚扣除的时长
+    const penaltyRights = this.calculatePenaltyRights()
+    
+    // 更新当前可用时长
+    this.phoneUsageRights = Math.max(0, shouldHaveRights - usedRights - penaltyRights)
+    
+    this.saveRewardData()
+    
+    return {
+      shouldHave: shouldHaveRights,
+      used: usedRights,
+      penalty: penaltyRights,
+      available: this.phoneUsageRights
+    }
+  }
+
+  // 计算已使用的时长
+  calculateUsedRights() {
+    const usageHistory = wx.getStorageSync('phoneUsageHistory') || []
+    return usageHistory.reduce((total, usage) => total + usage.minutes, 0)
+  }
+
+  // 计算惩罚扣除的时长
+  calculatePenaltyRights() {
+    return this.penalties.reduce((total, penalty) => {
+      return total + (penalty.lostTime || 0)
+    }, 0)
+  }
+
   // 检查连续打卡奖励
   checkStreakRewards(streakDays) {
     const today = new Date().toISOString().split('T')[0]
@@ -305,12 +364,37 @@ class RewardSystem {
       }
     }
     
+    // 记录使用历史
+    this.recordUsageHistory(minutes)
+    
     this.phoneUsageRights -= minutes
     this.saveRewardData()
     
     return {
       success: true,
-      message: `已使用${this.formatTime(minutes)}，剩余${this.formatTime(this.phoneUsageRights)}`
+      message: `已使用${this.formatTime(minutes)}，剩余${this.formatTime(this.phoneUsageRights)}`,
+      remaining: this.phoneUsageRights
+    }
+  }
+
+  // 记录使用历史
+  recordUsageHistory(minutes) {
+    try {
+      const usageHistory = wx.getStorageSync('phoneUsageHistory') || []
+      usageHistory.unshift({
+        minutes: minutes,
+        timestamp: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0]
+      })
+      
+      // 只保留最近100条记录
+      if (usageHistory.length > 100) {
+        usageHistory.splice(100)
+      }
+      
+      wx.setStorageSync('phoneUsageHistory', usageHistory)
+    } catch (error) {
+      console.error('记录使用历史失败:', error)
     }
   }
 
