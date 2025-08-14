@@ -1,0 +1,30 @@
+<!--pages/mistakes/mistakes.wxml-->
+<view class="page-container">
+  <view class="scroll-container">
+    <view class="input-card" wx:if="{{showInputCard}}">
+      <textarea class="input-area" placeholder="在这里记录你的错题..." value="{{newMistake}}" bindinput="onInput" maxlength="{{maxCharacters}}"></textarea>
+      <view class="character-count">
+        <text class="count-text {{characterCount > maxCharacters ? 'over-limit' : ''}}">{{characterCount}}/{{maxCharacters}}</text>
+      </view>
+      <view class="input-tips">
+        <text class="tip-text">• 请输入至少5个字符</text>
+        <text class="tip-text">• 内容应真实有效</text>
+      </view>
+      <view class="action-buttons">
+        <button class="save-button" bindtap="saveMistake">保存</button>
+        <button class="cancel-button" bindtap="hideInputCard">取消</button>
+      </view>
+    </view>
+
+    <view class="mistake-list">
+      <view class="mistake-item" wx:for="{{mistakes}}" wx:key="_id">
+        <text class="mistake-text">{{item.content}}</text>
+        <text class="mistake-date">{{item.date}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="add-button-container">
+    <button class="add-button" bindtap="showInputCard">+</button>
+  </view>
+</view>
