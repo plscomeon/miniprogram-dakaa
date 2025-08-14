@@ -44,6 +44,14 @@ Page({
             }
           }
           
+          // 如果有错题图片，获取临时链接
+          if (record.mistakeImages && record.mistakeImages.length > 0) {
+            const mistakeTempResult = await CloudApi.getTempFileURL(record.mistakeImages)
+            if (mistakeTempResult.success) {
+              record.mistakeImages = mistakeTempResult.data.map(item => item.tempFileURL)
+            }
+          }
+          
           this.setData({
             record,
             dayOfWeek
@@ -82,6 +90,17 @@ Page({
     wx.previewImage({
       current: record.images[index],
       urls: record.images
+    })
+  },
+
+  // 预览错题图片
+  previewMistakeImage(e) {
+    const { index } = e.currentTarget.dataset
+    const { record } = this.data
+    
+    wx.previewImage({
+      current: record.mistakeImages[index],
+      urls: record.mistakeImages
     })
   },
 
@@ -140,8 +159,8 @@ Page({
       text += `\n`
     }
     
-    if (record.videoUrl) {
-      text += `🎥 视频讲解：已上传\n\n`
+    if (record.mistakeImages && record.mistakeImages.length > 0) {
+      text += `📷 说错题：${record.mistakeImages.length}张图片\n\n`
     }
     
     if (record.diary) {

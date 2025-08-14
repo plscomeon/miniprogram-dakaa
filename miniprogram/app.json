@@ -3,33 +3,34 @@
     "pages/checkin/checkin",
     "pages/history/history",
     "pages/profile/profile",
-    "pages/record-detail/record-detail"
+    "pages/record-detail/record-detail",
+    "pages/mistakes/mistakes"
   ],
   "window": {
     "backgroundColor": "#F9FAFB",
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#FFFFFF",
-    "navigationBarTitleText": "Learning Tracker",
+    "navigationBarTitleText": "学习打卡",
     "navigationBarTextStyle": "black"
   },
   "tabBar": {
-    "color": "#8E8E93",
-    "selectedColor": "#3B82F6",
-    "backgroundColor": "#FFFFFF",
-    "borderStyle": "black",
+    "color": "#64748b",
+    "selectedColor": "#07c160",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/checkin/checkin",
-        "text": "今日打卡",
+        "text": "打卡",
         "iconPath": "images/icons/checkin.png",
         "selectedIconPath": "images/icons/checkin-active.png"
       },
-    {
-      "pagePath": "pages/history/history",
-      "text": "打卡记录",
-      "iconPath": "images/icons/history.png",
-      "selectedIconPath": "images/icons/history-active.png"
-    },
+      {
+        "pagePath": "pages/history/history",
+        "text": "记录",
+        "iconPath": "images/icons/history.png",
+        "selectedIconPath": "images/icons/history-active.png"
+      },
       {
         "pagePath": "pages/profile/profile",
         "text": "我的",

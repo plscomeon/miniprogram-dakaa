@@ -2,6 +2,22 @@
 class CloudApi {
   
   // 用户管理相关API
+  static async login(loginData) {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'userManager',
+        data: {
+          action: 'login',
+          data: loginData
+        }
+      })
+      return result.result
+    } catch (error) {
+      console.error('用户登录失败:', error)
+      return { success: false, message: error.message }
+    }
+  }
+
   static async saveUserInfo(userInfo) {
     try {
       const result = await wx.cloud.callFunction({
@@ -146,26 +162,69 @@ class CloudApi {
   }
 
   // 文件上传相关API
-  static async uploadFile(filePath, fileName, fileType) {
+  static async uploadFile(filePath, fileName, fileType, onProgress = null) {
     try {
-      // 上传文件到云存储
-      const cloudPath = `${fileType}/${Date.now()}_${Math.random().toString(36).substring(2, 15)}_${fileName}`
+      // 验证文件路径
+      if (!filePath) {
+        throw new Error('文件路径不能为空')
+      }
+
+      // 生成云存储路径
+      const timestamp = Date.now()
+      const randomStr = Math.random().toString(36).substring(2, 15)
+      const cloudPath = `${fileType}/${timestamp}_${randomStr}_${fileName}`
       
-      const uploadResult = await wx.cloud.uploadFile({
+      console.log('开始上传文件:', { filePath, cloudPath, fileType })
+
+      // 上传文件到云存储
+      const uploadTask = wx.cloud.uploadFile({
         cloudPath: cloudPath,
         filePath: filePath
       })
+
+      // 监听上传进度
+      if (onProgress && typeof onProgress === 'function') {
+        uploadTask.onProgressUpdate((progress) => {
+          console.log('上传进度:', progress)
+          onProgress(progress)
+        })
+      }
+
+      const uploadResult = await uploadTask
+
+      console.log('文件上传成功:', uploadResult)
 
       return {
         success: true,
         data: {
           fileID: uploadResult.fileID,
           cloudPath: cloudPath
-        }
+        },
+        message: '文件上传成功'
       }
     } catch (error) {
       console.error('文件上传失败:', error)
-      return { success: false, message: error.message }
+      
+      let errorMessage = '文件上传失败'
+      if (error.errMsg) {
+        if (error.errMsg.includes('network')) {
+          errorMessage = '网络连接失败，请检查网络后重试'
+        } else if (error.errMsg.includes('size')) {
+          errorMessage = '文件过大，请选择较小的文件'
+        } else if (error.errMsg.includes('permission')) {
+          errorMessage = '没有上传权限，请联系管理员'
+        } else {
+          errorMessage = error.errMsg
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      return { 
+        success: false, 
+        message: errorMessage,
+        error: error
+      }
     }
   }
 

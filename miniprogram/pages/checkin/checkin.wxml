@@ -1,16 +1,29 @@
 <!--pages/checkin/checkin.wxml-->
 <view class="page-container">
-  <!-- 固定顶部登录栏 -->
-  <view class="header-bar">
-    <view class="user-section" wx:if="{{isLogin}}" bindtap="onAvatarTap">
-      <image class="user-avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
-      <text class="user-name">{{userInfo.nickName}}</text>
-    </view>
-    <view class="login-section" wx:else>
-      <button class="login-btn" bindtap="showLoginModal">点击登录</button>
-    </view>
-    <view class="date-section">
-      <text class="current-date">{{currentDate}}</text>
+  <!-- 固定顶部区域 -->
+  <view class="header-container">
+    <!-- 用户信息和日期在同一行 -->
+    <view class="header-top">
+      <view class="user-section" wx:if="{{isLogin && userInfo.nickName}}" bindtap="onAvatarTap">
+        <image 
+          class="user-avatar" 
+          src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" 
+          mode="aspectFill"
+          binderror="onAvatarError"
+          lazy-load="{{false}}">
+        </image>
+        <view class="user-info">
+          <text class="user-name">{{userInfo.nickName || '微信用户'}}</text>
+          <text class="motivation-text" wx:if="{{motivationText}}">{{motivationText}}</text>
+        </view>
+      </view>
+      <view class="login-section" wx:else>
+        <button class="login-btn" bindtap="showLoginModal">登录</button>
+      </view>
+      <view class="date-section">
+        <view class="date-info">
+        </view>
+      </view>
     </view>
   </view>
 
@@ -22,12 +35,24 @@
         <view class="modal-close" bindtap="hideLoginModal">×</view>
       </view>
       <view class="modal-body">
-        <button class="avatar-selector" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-          <image class="temp-avatar" src="{{tempAvatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
-          <text class="avatar-tip">点击选择头像</text>
+        <view class="login-description">
+          <text class="description-text">获取您的微信头像和昵称，用于个性化显示</text>
+        </view>
+        
+        <!-- 微信一键登录按钮 -->
+        <button 
+          class="one-click-login-btn" 
+          bindtap="oneClickLogin"
+          disabled="{{submitting}}">
+          <view class="login-btn-content">
+            <view class="wechat-icon">💬</view>
+            <text class="login-btn-text">{{submitting ? '登录中...' : '微信一键登录'}}</text>
+          </view>
         </button>
-        <input class="nickname-input" type="nickname" placeholder="点击输入框自动填充昵称" bind:blur="onNicknameChange" value="{{tempNickName}}" />
-        <button class="confirm-login-btn" bindtap="submitUserInfo">确认登录</button>
+        
+        <view class="privacy-notice">
+          <text class="notice-text">我们将严格保护您的个人信息</text>
+        </view>
       </view>
     </view>
   </view>
@@ -51,7 +76,6 @@
       <!-- 预习提问模块 -->
       <view class="module-card">
         <view class="module-header">
-          <view class="module-icon">📚</view>
           <view class="module-title">预习提问</view>
         </view>
         <view class="module-content">
@@ -78,23 +102,24 @@
         </view>
       </view>
 
-      <!-- 视频上传模块 -->
+      <!-- 说错题模块 -->
       <view class="module-card">
         <view class="module-header">
-          <view class="module-icon">🎥</view>
-          <view class="module-title">错题讲解视频</view>
+          <view class="module-title">说错题</view>
         </view>
         <view class="module-content">
-          <view class="video-upload" wx:if="{{!videoInfo.url}}">
-            <view class="upload-area" bindtap="chooseVideo">
-              <view class="upload-icon">📹</view>
-              <text class="upload-text">点击上传讲解视频</text>
-              <text class="upload-hint">支持5分钟内视频</text>
+          <!-- 错题图片上传 -->
+          <view class="mistake-images-section">
+            <view class="mistake-images-grid">
+              <view class="mistake-image-item" wx:for="{{mistakeImages}}" wx:key="index">
+                <image class="mistake-image" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindtap="previewMistakeImage"></image>
+                <view class="mistake-image-delete" data-index="{{index}}" bindtap="deleteMistakeImage">×</view>
+              </view>
+              <view class="mistake-image-add" bindtap="chooseMistakeImages" wx:if="{{mistakeImages.length < 9}}">
+                <text class="add-icon">+</text>
+                <text class="add-text">添加错题图片</text>
+              </view>
             </view>
-          </view>
-          <view class="video-preview" wx:else>
-            <video class="preview-video" src="{{videoInfo.url}}" poster="{{videoInfo.cover}}" controls></video>
-            <button class="btn btn-delete" bindtap="deleteVideo">删除视频</button>
           </view>
         </view>
       </view>
@@ -102,7 +127,6 @@
       <!-- 学习日记模块 -->
       <view class="module-card">
         <view class="module-header">
-          <view class="module-icon">📝</view>
           <view class="module-title">学习日记</view>
         </view>
         <view class="module-content">

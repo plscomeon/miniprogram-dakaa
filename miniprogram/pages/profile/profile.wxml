@@ -5,7 +5,6 @@
     <view class="user-card" bindtap="changeAvatar">
       <view class="user-avatar">
         <image class="avatar-img" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
-        <view class="avatar-edit">✏️</view>
       </view>
       <view class="user-info">
         <text class="user-name">{{userInfo.nickName || '学习者'}}</text>
@@ -24,8 +23,8 @@
         <text class="stats-label">连续天数</text>
       </view>
       <view class="stats-item">
-        <text class="stats-number">{{totalVideos}}</text>
-        <text class="stats-label">视频数量</text>
+        <text class="stats-number">{{totalMistakes}}</text>
+        <text class="stats-label">错题数量</text>
       </view>
       <view class="stats-item">
         <text class="stats-number">{{totalWords}}</text>
@@ -41,7 +40,6 @@
       </view>
       <view class="achievement-list">
         <view class="achievement-item {{item.unlocked ? 'unlocked' : 'locked'}}" wx:for="{{achievements}}" wx:key="id">
-          <view class="achievement-icon">{{item.icon}}</view>
           <view class="achievement-info">
             <text class="achievement-name">{{item.name}}</text>
             <text class="achievement-desc">{{item.description}}</text>
@@ -56,23 +54,23 @@
 
     <!-- 功能菜单 -->
     <view class="menu-section">
+      <view class="menu-item" bindtap="goToMistakes">
+        <text class="menu-title">我的错题本</text>
+        <text class="menu-arrow">›</text>
+      </view>
       <view class="menu-item" bindtap="exportData">
-        <view class="menu-icon">📊</view>
         <text class="menu-title">导出数据</text>
         <text class="menu-arrow">›</text>
       </view>
       <view class="menu-item" bindtap="shareApp">
-        <view class="menu-icon">📤</view>
         <text class="menu-title">分享应用</text>
         <text class="menu-arrow">›</text>
       </view>
       <view class="menu-item" bindtap="feedback">
-        <view class="menu-icon">💬</view>
         <text class="menu-title">意见反馈</text>
         <text class="menu-arrow">›</text>
       </view>
       <view class="menu-item" bindtap="about">
-        <view class="menu-icon">ℹ️</view>
         <text class="menu-title">关于我们</text>
         <text class="menu-arrow">›</text>
       </view>
@@ -106,11 +104,9 @@
     <view class="modal-body">
       <view class="export-options">
         <view class="export-option {{exportType === 'excel' ? 'selected' : ''}}" bindtap="selectExportType" data-type="excel">
-          <view class="option-icon">📊</view>
           <text class="option-title">Excel表格</text>
         </view>
         <view class="export-option {{exportType === 'pdf' ? 'selected' : ''}}" bindtap="selectExportType" data-type="pdf">
-          <view class="option-icon">📄</view>
           <text class="option-title">PDF报告</text>
         </view>
       </view>

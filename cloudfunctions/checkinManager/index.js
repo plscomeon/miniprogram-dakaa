@@ -196,15 +196,15 @@ async function getStats(openid) {
 
   // 计算其他统计数据
   let totalQuestions = 0
-  let totalVideos = 0
+  let totalMistakeImages = 0
   let totalDiaries = 0
   let totalImages = 0
 
   records.forEach(record => {
     if (record.questions) totalQuestions += record.questions.length
-    if (record.videoInfo && record.videoInfo.path) totalVideos++
-    if (record.diary && record.diary.content) totalDiaries++
-    if (record.diary && record.diary.images) totalImages += record.diary.images.length
+    if (record.mistakeImages) totalMistakeImages += record.mistakeImages.length
+    if (record.diary) totalDiaries++
+    if (record.images) totalImages += record.images.length
   })
 
   return {
@@ -214,7 +214,7 @@ async function getStats(openid) {
       consecutiveDays,
       monthlyDays,
       totalQuestions,
-      totalVideos,
+      totalMistakeImages,
       totalDiaries,
       totalImages
     }

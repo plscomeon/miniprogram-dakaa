@@ -2,37 +2,53 @@
 const CloudApi = require('../../utils/cloudApi.js')
 
 Page({
+  onLoad() {
+    // 页面加载时初始化日期
+    this.updateDate();
+  },
   data: {
+    isLogin: false,
+    userInfo: {},
+    motivationText: '', // 激励语
+    showLoginModal: false,
+    showUserMenu: false,
     currentDate: '',
-    userInfo: {}, // 保存正式的用户信息（包含云存储FileID）
-    isLogin: false, // 登录状态
-    tempAvatarUrl: '', // 临时本地头像路径
-    tempNickName: '', // 临时昵称
-    showLoginModal: false, // 登录弹窗显示状态
     questions: [''],
-    videoInfo: {
-      url: '',
-      cover: ''
-    },
+    mistakeImages: [], // 错题图片数组
     diary: '',
     images: [],
     submitting: false,
-    showSuccessToast: false,
-    showUserMenu: false
+    showSuccessToast: false
   },
 
-  onLoad() {
-    this.updateDate(); // 更新日期显示
-  },
-
-  onShow() {
+  async onShow() {
+    console.log('Checkin页面：onShow');
+    
+    // 调试：检查本地存储状态
+    this.debugCurrentState();
+    
     // 每次进入页面，都从全局app.js同步最新的登录状态
-    this.syncLoginStatus();
+    await this.syncLoginStatus();
+    
+    // 更新日期显示
+    this.updateDate();
+    
     // 如果已登录，则加载今天的打卡记录
     if (this.data.isLogin) {
+      this.generateMotivationText(); // 生成激励语
       this.loadDraft();
       this.checkTodayRecord();
     }
+    
+    // 设置用户信息更新监听
+    const app = getApp();
+    app.onUserInfoUpdate = (userInfo) => {
+      console.log('Checkin页面：收到用户信息更新通知:', userInfo);
+      this.setData({
+        userInfo: userInfo,
+        isLogin: true
+      });
+    };
   },
 
   onHide() {
@@ -42,24 +58,62 @@ Page({
     }
   },
 
-  // 同步全局登录状态到当前页面
-  syncLoginStatus() {
+  // 同步登录状态 - 使用统一的用户信息获取方法
+  async syncLoginStatus() {
     const app = getApp();
-    this.setData({
-      isLogin: app.globalData.isUserLoggedIn,
-      userInfo: app.globalData.userInfo
-    });
-    console.log('Checkin Page: Synced login status - ', this.data.isLogin);
+    
+    console.log('Checkin页面：开始同步登录状态...');
+    
+    // 使用app的统一方法获取有效用户信息
+    const validUserInfo = app.getValidUserInfo();
+    
+    if (validUserInfo) {
+      console.log('Checkin页面：获取到有效用户信息:', validUserInfo);
+      
+      // 更新页面状态
+      this.setData({
+        isLogin: true,
+        userInfo: validUserInfo
+      });
+      
+      console.log('Checkin页面：登录状态已同步，用户:', validUserInfo.nickName);
+      
+      // 生成激励语
+      this.generateMotivationText();
+    } else {
+      console.log('Checkin页面：没有有效用户信息，设置为未登录状态');
+      this.setData({
+        isLogin: false,
+        userInfo: {}
+      });
+    }
   },
 
-  // 显示登录弹窗
-  showLoginModal() {
-    this.setData({ showLoginModal: true });
+  // 页面级别的用户信息更新方法（由app.js调用）
+  updateUserInfo(userInfo) {
+    console.log('Checkin页面：收到用户信息更新通知:', userInfo);
+    
+    if (userInfo && userInfo.nickName && userInfo.nickName !== '微信用户') {
+      this.setData({
+        isLogin: true,
+        userInfo: userInfo
+      });
+      console.log('Checkin页面：用户信息已更新');
+    }
   },
 
-  // 隐藏登录弹窗
-  hideLoginModal() {
-    this.setData({ showLoginModal: false });
+  // 调试方法：显示当前状态
+  debugCurrentState() {
+    const app = getApp();
+    const localUserInfo = wx.getStorageSync('userInfo');
+    
+    console.log('=== Checkin页面状态调试 ===');
+    console.log('页面登录状态:', this.data.isLogin);
+    console.log('页面用户信息:', this.data.userInfo);
+    console.log('全局登录状态:', app.globalData.isLoggedIn);
+    console.log('全局用户信息:', app.globalData.userInfo);
+    console.log('本地存储用户信息:', localUserInfo);
+    console.log('=========================');
   },
 
   // 更新日期显示
@@ -73,80 +127,215 @@ Page({
     });
   },
 
-  // --- 新版登录逻辑 ---
-
-  // 1. 用户选择头像
-  onChooseAvatar(e) {
-    const { avatarUrl } = e.detail;
+  // 生成随机激励语
+  generateMotivationText() {
+    const motivations = [
+      '今天也要加油哦！',
+      '学习让你更优秀',
+      '每天进步一点点',
+      '坚持就是胜利',
+      '知识改变命运',
+      '努力成就梦想',
+      '今日事今日毕',
+      '学而时习之',
+      '温故而知新',
+      '书山有路勤为径',
+      '学无止境',
+      '厚德载物',
+      '自强不息',
+      '博学笃行',
+      '勤奋是成功之母',
+      '天道酬勤',
+      '学习使人进步',
+      '知识就是力量',
+      '持之以恒',
+      '精益求精'
+    ];
+    
+    const randomIndex = Math.floor(Math.random() * motivations.length);
+    const motivationText = motivations[randomIndex];
+    
     this.setData({
-      tempAvatarUrl: avatarUrl,
+      motivationText: motivationText
     });
-    console.log('Temp avatar selected:', avatarUrl);
+    
+    console.log('生成激励语:', motivationText);
   },
 
-  // 2. 用户输入昵称
-  onNicknameChange(e) {
-    this.setData({
-      tempNickName: e.detail.value.trim(),
+  // --- 微信官方登录流程 ---
+
+  // 显示登录弹窗
+  showLoginModal() {
+    console.log('Checkin页面：显示登录弹窗');
+    this.setData({ 
+      showLoginModal: true
     });
   },
 
-  // 3. 用户点击授权登录按钮
-  async submitUserInfo() {
+  // 隐藏登录弹窗
+  hideLoginModal() {
+    console.log('Checkin页面：隐藏登录弹窗');
+    this.setData({ 
+      showLoginModal: false
+    });
+  },
+
+  // 微信一键登录 - 必须在用户点击事件中直接调用 getUserProfile
+  oneClickLogin() {
     if (this.data.submitting) return;
-
-    if (!this.data.tempAvatarUrl) {
-      wx.showToast({ title: '请选择头像', icon: 'none' });
-      return;
-    }
-    if (!this.data.tempNickName) {
-      wx.showToast({ title: '请输入昵称', icon: 'none' });
-      return;
-    }
-
+    
+    console.log('Checkin页面：开始微信登录流程');
+    
     this.setData({ submitting: true });
     wx.showLoading({ title: '登录中...' });
+    
+    // 第一步：直接在用户点击事件中调用 getUserProfile
+    wx.getUserProfile({
+      desc: '用于完善用户资料',
+      success: async (userProfileRes) => {
+        try {
+          console.log('Checkin页面：getUserProfile成功:', userProfileRes);
+          
+          if (!userProfileRes.userInfo || !userProfileRes.userInfo.nickName) {
+            throw new Error('获取的用户信息不完整');
+          }
+          
+          // 第二步：获取登录 code
+          const loginResult = await this.wxLogin();
+          if (!loginResult.success) {
+            throw new Error('获取登录凭证失败');
+          }
+          
+          console.log('Checkin页面：获取到登录code:', loginResult.code);
+          console.log('Checkin页面：获取用户信息成功:', userProfileRes.userInfo);
+          
+          // 第三步：处理登录
+          await this.processUserLogin(loginResult.code, userProfileRes.userInfo);
+          
+        } catch (error) {
+          console.error('Checkin页面：登录失败:', error);
+          wx.showToast({
+            title: error.message || '登录失败，请重试',
+            icon: 'none',
+            duration: 2000
+          });
+        } finally {
+          this.setData({ submitting: false });
+          wx.hideLoading();
+        }
+      },
+      fail: (err) => {
+        console.error('Checkin页面：getUserProfile失败:', err);
+        this.setData({ submitting: false });
+        wx.hideLoading();
+        wx.showToast({
+          title: '用户取消授权或获取失败',
+          icon: 'none',
+          duration: 2000
+        });
+      }
+    });
+  },
 
+  // 调用 wx.login 获取 code
+  wxLogin() {
+    return new Promise((resolve) => {
+      wx.login({
+        success: (res) => {
+          console.log('Checkin页面：wx.login成功:', res);
+          if (res.code) {
+            resolve({
+              success: true,
+              code: res.code
+            });
+          } else {
+            resolve({
+              success: false,
+              message: '登录失败：' + res.errMsg
+            });
+          }
+        },
+        fail: (err) => {
+          console.error('Checkin页面：wx.login失败:', err);
+          resolve({
+            success: false,
+            message: '登录失败：' + err.errMsg
+          });
+        }
+      });
+    });
+  },
+
+
+
+  // 处理用户登录
+  // 处理用户登录 - 按照官方文档流程
+  async processUserLogin(code, userInfo) {
+    console.log('Checkin页面：开始处理用户登录');
+    console.log('Checkin页面：登录code:', code);
+    console.log('Checkin页面：用户信息:', userInfo);
+    
     try {
-      // a. 上传头像到云存储，获取永久FileID
-      const uploadResult = await CloudApi.uploadFile(this.data.tempAvatarUrl, `avatar_${Date.now()}.jpg`, 'avatars');
-      if (!uploadResult.success) {
-        throw new Error('头像上传失败');
-      }
-      const avatarFileID = uploadResult.data.fileID;
-
-      // b. 准备用户信息（包含FileID）
-      const userInfoToSave = {
-        nickName: this.data.tempNickName,
-        avatarUrl: avatarFileID,
+      // 1. 准备登录数据，包含 code 和用户信息
+      const loginData = {
+        code: code,
+        userInfo: {
+          nickName: userInfo.nickName || '微信用户',
+          avatarUrl: userInfo.avatarUrl || '/images/default-avatar.png',
+          gender: userInfo.gender || 0,
+          country: userInfo.country || '',
+          province: userInfo.province || '',
+          city: userInfo.city || '',
+          language: userInfo.language || 'zh_CN'
+        }
       };
+      console.log('Checkin页面：准备发送登录数据:', loginData);
 
-      // c. 保存用户信息到云数据库
-      const saveResult = await CloudApi.saveUserInfo(userInfoToSave);
-      if (!saveResult.success) {
-        throw new Error('用户信息保存失败');
+      // 2. 调用云函数处理登录（包含获取openid和保存用户信息）
+      console.log('Checkin页面：开始调用登录云函数...');
+      const loginResult = await CloudApi.login(loginData);
+      if (!loginResult.success) {
+        throw new Error(loginResult.message || '登录失败');
       }
+      console.log('Checkin页面：登录云函数调用成功:', loginResult.data);
 
-      // d. 更新全局和页面数据
+      // 3. 使用登录成功后返回的用户信息
+      const finalUserInfo = loginResult.data.userInfo;
+      console.log('Checkin页面：最终用户信息:', finalUserInfo);
+
+      // 4. 更新全局状态
       const app = getApp();
-      app.setUserInfo(saveResult.data); // 调用全局方法更新
-
+      app.setUserInfo(finalUserInfo);
+      console.log('Checkin页面：全局用户信息已更新');
+      
+      // 5. 更新页面状态
       this.setData({
-        userInfo: saveResult.data,
+        userInfo: finalUserInfo,
         isLogin: true,
-        showLoginModal: false, // 关闭登录弹窗
-        tempAvatarUrl: '', // 清空临时数据
-        tempNickName: ''
+        showLoginModal: false
       });
 
-      wx.showToast({ title: '登录成功', icon: 'success' });
+      // 6. 登录成功后生成激励语
+      this.generateMotivationText();
+
+      console.log('Checkin页面：页面登录状态更新完成:', this.data.isLogin);
+      console.log('Checkin页面：页面用户信息更新完成:', this.data.userInfo);
+      
+      // 7. 显示成功提示
+      wx.showToast({ 
+        title: '登录成功', 
+        icon: 'success',
+        duration: 2000
+      });
 
     } catch (error) {
-      console.error('登录失败:', error);
-      wx.showToast({ title: error.message || '登录失败，请重试', icon: 'none' });
-    } finally {
-      this.setData({ submitting: false });
-      wx.hideLoading();
+      console.error('Checkin页面：登录失败:', error);
+      wx.showToast({ 
+        title: error.message || '登录失败，请重试', 
+        icon: 'none',
+        duration: 3000
+      });
+      throw error; // 重新抛出错误，让调用方处理
     }
   },
 
@@ -193,127 +382,101 @@ Page({
     this.setData({ questions })
   },
 
-  // 视频上传相关方法 - 使用最新的chooseMedia API
-  chooseVideo() {
-    console.log('开始选择视频...')
-    
-    // 优先使用最新的chooseMedia API
+  // 错题图片相关方法
+  chooseMistakeImages() {
+    const maxCount = 9 - this.data.mistakeImages.length
+    if (maxCount <= 0) {
+      wx.showToast({
+        title: '最多上传9张错题图片',
+        icon: 'none'
+      })
+      return
+    }
+
+    // 检查是否支持chooseMedia（新版API）
     if (wx.chooseMedia) {
       wx.chooseMedia({
-        count: 1,
-        mediaType: ['video'],
+        count: maxCount,
+        mediaType: ['image'],
         sourceType: ['album', 'camera'],
-        maxDuration: 300, // 5分钟
-        camera: 'back',
         success: (res) => {
-          console.log('chooseMedia选择视频成功:', res)
-          const tempFile = res.tempFiles[0]
-          
-          // 检查视频大小（限制50MB）
-          if (tempFile.size > 50 * 1024 * 1024) {
-            wx.showToast({
-              title: '视频文件过大，请选择小于50MB的视频',
-              icon: 'none',
-              duration: 2000
-            })
-            return
-          }
-          
-          // 检查视频时长（限制5分钟）
-          if (tempFile.duration > 300) {
-            wx.showToast({
-              title: '视频时长过长，请选择5分钟内的视频',
-              icon: 'none',
-              duration: 2000
-            })
-            return
-          }
-          
-          // 直接保存视频信息
-          this.setData({
-            videoInfo: {
-              url: tempFile.tempFilePath,
-              cover: tempFile.thumbTempFilePath || tempFile.tempFilePath
-            }
-          })
-          
-          wx.showToast({
-            title: '视频添加成功',
-            icon: 'success'
-          })
+          const tempFilePaths = res.tempFiles.map(file => file.tempFilePath)
+          this.uploadMistakeImages(tempFilePaths)
         },
         fail: (err) => {
-          console.error('chooseMedia选择视频失败:', err)
-          // 降级使用chooseVideo
-          this.chooseVideoFallback()
+          console.log('选择错题图片失败:', err)
+          wx.showToast({
+            title: '选择图片失败',
+            icon: 'none'
+          })
         }
       })
     } else {
-      // 降级使用chooseVideo
-      this.chooseVideoFallback()
+      // 降级使用chooseImage
+      wx.chooseImage({
+        count: maxCount,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+        success: (res) => {
+          this.uploadMistakeImages(res.tempFilePaths)
+        },
+        fail: (err) => {
+          console.log('选择错题图片失败:', err)
+          wx.showToast({
+            title: '选择图片失败',
+            icon: 'none'
+          })
+        }
+      })
     }
   },
 
-  // 降级方案：使用chooseVideo API
-  chooseVideoFallback() {
-    console.log('使用chooseVideo降级方案...')
-    wx.chooseVideo({
-      sourceType: ['album', 'camera'],
-      maxDuration: 300, // 5分钟
-      camera: 'back',
-      success: (res) => {
-        console.log('chooseVideo选择视频成功:', res)
-        
-        // 检查视频大小（限制50MB）
-        if (res.size && res.size > 50 * 1024 * 1024) {
-          wx.showToast({
-            title: '视频文件过大，请选择小于50MB的视频',
-            icon: 'none',
-            duration: 2000
-          })
-          return
+  async uploadMistakeImages(filePaths) {
+    wx.showLoading({ title: '上传错题图片中...' })
+    
+    try {
+      const uploadPromises = filePaths.map(async (filePath, index) => {
+        const fileName = `mistake_${Date.now()}_${index}.jpg`
+        const result = await CloudApi.uploadFile(filePath, fileName, 'mistakes')
+        if (result.success) {
+          return result.data.fileID
+        } else {
+          throw new Error(`错题图片${index + 1}上传失败`)
         }
-        
-        // 检查视频时长（限制5分钟）
-        if (res.duration && res.duration > 300) {
-          wx.showToast({
-            title: '视频时长过长，请选择5分钟内的视频',
-            icon: 'none',
-            duration: 2000
-          })
-          return
-        }
-        
-        // 直接保存视频信息
-        this.setData({
-          videoInfo: {
-            url: res.tempFilePath,
-            cover: res.thumbTempFilePath || res.tempFilePath
-          }
-        })
-        
-        wx.showToast({
-          title: '视频添加成功',
-          icon: 'success'
-        })
-      },
-      fail: (err) => {
-        console.error('chooseVideo选择视频失败:', err)
-        wx.showToast({
-          title: '选择视频失败，请重试',
-          icon: 'none',
-          duration: 2000
-        })
-      }
-    })
+      })
+      
+      const uploadedFileIDs = await Promise.all(uploadPromises)
+      
+      this.setData({
+        mistakeImages: [...this.data.mistakeImages, ...uploadedFileIDs]
+      })
+      
+      wx.hideLoading()
+      wx.showToast({
+        title: '错题图片上传成功',
+        icon: 'success'
+      })
+    } catch (error) {
+      console.error('错题图片上传失败:', error)
+      wx.hideLoading()
+      wx.showToast({
+        title: '图片上传失败，请重试',
+        icon: 'none'
+      })
+    }
   },
 
-  deleteVideo() {
-    this.setData({
-      videoInfo: {
-        url: '',
-        cover: ''
-      }
+  deleteMistakeImage(e) {
+    const { index } = e.currentTarget.dataset
+    const mistakeImages = this.data.mistakeImages.filter((_, i) => i !== index)
+    this.setData({ mistakeImages })
+  },
+
+  previewMistakeImage(e) {
+    const { index } = e.currentTarget.dataset
+    wx.previewImage({
+      current: this.data.mistakeImages[index],
+      urls: this.data.mistakeImages
     })
   },
 
@@ -423,8 +586,11 @@ Page({
 
   // 提交打卡
   async submitCheckin() {
+    console.log('开始提交打卡...')
+    
     // 首先检查登录状态
     if (!this.data.isLogin) {
+      console.log('用户未登录')
       wx.showModal({
         title: '需要登录',
         content: '请先登录后再提交打卡',
@@ -442,6 +608,8 @@ Page({
 
     // 验证必填项
     const validQuestions = this.data.questions.filter(q => q.trim())
+    console.log('有效问题数量:', validQuestions.length)
+    
     if (validQuestions.length === 0) {
       wx.showToast({
         title: '请至少填写一个预习问题',
@@ -458,36 +626,27 @@ Page({
       return
     }
 
+    console.log('验证通过，开始提交')
     this.setData({ submitting: true })
+    wx.showLoading({ title: '提交中...' })
 
     try {
-      // 如果有视频，先上传视频
-      let videoFileID = ''
-      if (this.data.videoInfo.url) {
-        wx.showLoading({ title: '上传视频中...' })
-        const videoResult = await CloudApi.uploadFile(
-          this.data.videoInfo.url, 
-          `video_${Date.now()}.mp4`, 
-          'videos'
-        )
-        if (videoResult.success) {
-          videoFileID = videoResult.data.fileID
-        }
-        wx.hideLoading()
-      }
-
       const data = {
         questions: validQuestions,
-        videoUrl: videoFileID,
-        videoCover: this.data.videoInfo.cover,
+        mistakeImages: this.data.mistakeImages, // 错题图片
         diary: this.data.diary,
         images: this.data.images
       }
 
+      console.log('准备保存打卡数据:', data)
+      wx.showLoading({ title: '保存数据中...' })
+
       // 保存到云数据库
       const result = await CloudApi.saveCheckin(data)
+      console.log('保存结果:', result)
       
       if (result.success) {
+        console.log('打卡成功')
         this.showSuccessToast()
         this.clearDraft()
         
@@ -496,15 +655,18 @@ Page({
           icon: 'success'
         })
       } else {
+        console.error('保存失败:', result.message)
         throw new Error(result.message || '保存失败')
       }
     } catch (error) {
       console.error('提交打卡失败:', error)
       wx.showToast({
-        title: '提交失败，请重试',
-        icon: 'error'
+        title: '提交失败: ' + (error.message || '未知错误'),
+        icon: 'none',
+        duration: 3000
       })
     } finally {
+      wx.hideLoading()
       this.setData({ submitting: false })
     }
   },
@@ -521,6 +683,23 @@ Page({
   clearForm() {
     // 不清空表单，保持当前数据
     // 用户可以继续修改今日的打卡内容
+  },
+
+  // 头像加载错误处理
+  onAvatarError(e) {
+    console.log('头像加载失败:', e);
+    console.log('当前头像URL:', this.data.userInfo.avatarUrl);
+    
+    // 如果头像加载失败，使用默认头像
+    const userInfo = { ...this.data.userInfo };
+    userInfo.avatarUrl = '/images/default-avatar.png';
+    this.setData({ userInfo });
+    
+    // 同时更新全局状态
+    const app = getApp();
+    app.setUserInfo(userInfo);
+    
+    console.log('已切换到默认头像');
   },
 
   // 头像点击事件
@@ -545,10 +724,24 @@ Page({
       content: '确定要退出登录吗？',
       success: (res) => {
         if (res.confirm) {
-          wx.clearStorageSync()
-          wx.reLaunch({
-            url: '/pages/login/login'
-          })
+          // 清除本地存储的用户信息
+          wx.removeStorageSync('userInfo');
+          
+          // 清除全局状态
+          const app = getApp();
+          app.globalData.isLoggedIn = false;
+          app.globalData.userInfo = null;
+          
+          // 更新页面状态
+          this.setData({
+            isLogin: false,
+            userInfo: {}
+          });
+          
+          wx.showToast({
+            title: '已退出登录',
+            icon: 'success'
+          });
         }
       }
     })
@@ -558,6 +751,7 @@ Page({
   saveDraft() {
     const draft = {
       questions: this.data.questions,
+      mistakeImages: this.data.mistakeImages,
       diary: this.data.diary,
       timestamp: Date.now()
     }
@@ -570,6 +764,7 @@ Page({
       // 24小时内的草稿有效
       this.setData({
         questions: draft.questions || [''],
+        mistakeImages: draft.mistakeImages || [],
         diary: draft.diary || ''
       })
     }
@@ -577,5 +772,35 @@ Page({
 
   clearDraft() {
     wx.removeStorageSync('checkin_draft')
+  },
+
+  // 下载头像到本地临时文件
+  downloadAvatarToLocal(avatarUrl) {
+    return new Promise((resolve, reject) => {
+      // 检查是否已经是本地文件路径
+      if (avatarUrl.startsWith('wxfile://') || avatarUrl.startsWith('http://tmp/') || avatarUrl.startsWith('/tmp/')) {
+        console.log('头像已经是本地路径，无需下载');
+        resolve(avatarUrl);
+        return;
+      }
+
+      console.log('下载头像:', avatarUrl);
+      wx.downloadFile({
+        url: avatarUrl,
+        success: (res) => {
+          if (res.statusCode === 200) {
+            console.log('头像下载成功:', res.tempFilePath);
+            resolve(res.tempFilePath);
+          } else {
+            console.error('头像下载失败，状态码:', res.statusCode);
+            reject(new Error(`下载头像失败，状态码: ${res.statusCode}`));
+          }
+        },
+        fail: (err) => {
+          console.error('头像下载失败:', err);
+          reject(err);
+        }
+      });
+    });
   }
 })

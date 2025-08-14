@@ -58,7 +58,7 @@
         <view class="record-content">
           <view class="record-modules">
             <text class="module-tag completed" wx:if="{{item.preview}}">预习</text>
-            <text class="module-tag completed" wx:if="{{item.video}}">视频</text>
+            <text class="module-tag completed" wx:if="{{item.mistakeImages}}">错题</text>
             <text class="module-tag completed" wx:if="{{item.diary}}">日记</text>
           </view>
           <text class="record-summary">{{item.summary}}</text>
@@ -68,7 +68,6 @@
     </view>
     
     <view class="empty-state" wx:else>
-      <view class="empty-icon">📝</view>
       <text class="empty-text">暂无打卡记录</text>
     </view>
   </view>

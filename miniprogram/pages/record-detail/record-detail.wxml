@@ -9,7 +9,7 @@
       </view>
       <view class="modules-info">
         <text class="module-tag completed" wx:if="{{record.questions && record.questions.length > 0}}">预习</text>
-        <text class="module-tag completed" wx:if="{{record.videoUrl}}">视频</text>
+        <text class="module-tag completed" wx:if="{{record.mistakeImages && record.mistakeImages.length > 0}}">错题</text>
         <text class="module-tag completed" wx:if="{{record.diary}}">日记</text>
       </view>
     </view>
@@ -28,20 +28,22 @@
       </view>
     </view>
 
-    <!-- 视频讲解 -->
-    <view class="section" wx:if="{{record.videoUrl}}">
+    <!-- 说错题 -->
+    <view class="section" wx:if="{{record.mistakeImages && record.mistakeImages.length > 0}}">
       <view class="section-header">
-        <text class="section-title">视频讲解</text>
+        <text class="section-title">说错题</text>
+        <text class="section-count">{{record.mistakeImages.length}}张</text>
       </view>
-      <view class="video-container">
-        <video 
-          src="{{record.videoUrl}}" 
-          controls 
-          class="video-player"
-          poster="{{record.videoCover}}"
-          show-center-play-btn="{{true}}"
-          show-play-btn="{{true}}">
-        </video>
+      <view class="images-grid">
+        <image 
+          class="image-item" 
+          src="{{item}}" 
+          mode="aspectFill"
+          wx:for="{{record.mistakeImages}}" 
+          wx:key="index"
+          bindtap="previewMistakeImage"
+          data-index="{{index}}">
+        </image>
       </view>
     </view>
 
@@ -77,11 +79,9 @@
     <!-- 操作按钮 -->
     <view class="actions">
       <button class="action-btn secondary" bindtap="shareRecord">
-        <text class="btn-icon">📤</text>
         <text class="btn-text">分享</text>
       </button>
       <button class="action-btn secondary" bindtap="exportRecord">
-        <text class="btn-icon">📄</text>
         <text class="btn-text">导出</text>
       </button>
     </view>
