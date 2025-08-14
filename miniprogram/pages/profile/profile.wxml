@@ -32,20 +32,89 @@
       </view>
     </view>
 
+    <!-- 奖励系统 -->
+    <view class="reward-system-card">
+      <view class="card-header">
+        <text class="card-title">🎁 奖励系统</text>
+        <text class="phone-status" style="color: {{getStatusColor(isPhoneRecovered)}}">
+          {{getStatusText(isPhoneRecovered, phoneRecoveryDays)}}
+        </text>
+      </view>
+      
+      <!-- 手机使用权状态 -->
+      <view class="phone-usage-status">
+        <view class="usage-info">
+          <view class="usage-item">
+            <text class="usage-label">可用时长</text>
+            <text class="usage-value">{{formatTime(phoneUsageRights)}}</text>
+          </view>
+          <view class="usage-item" wx:if="{{isPhoneRecovered}}">
+            <text class="usage-label">回收倒计时</text>
+            <text class="usage-value recovery">{{phoneRecoveryDays}}天</text>
+          </view>
+        </view>
+        <button class="usage-btn" bindtap="showPhoneUsageManager" disabled="{{isPhoneRecovered}}">
+          {{isPhoneRecovered ? '手机已回收' : '使用时间'}}
+        </button>
+      </view>
+
+      <!-- 奖励规则说明 -->
+      <view class="reward-rules">
+        <text class="rules-title">📋 奖励规则</text>
+        <view class="rule-item">
+          <text class="rule-text">✅ 打卡1天 = 获得1小时手机使用权</text>
+        </view>
+        <view class="rule-item">
+          <text class="rule-text">❌ 忘记打卡1天 = 手机回收1天</text>
+        </view>
+        <view class="rule-item">
+          <text class="rule-text">⚠️ 忘记打卡2天 = 手机回收3天</text>
+        </view>
+      </view>
+
+      <!-- 最近奖励和惩罚 -->
+      <view class="recent-activities">
+        <view class="activity-section" wx:if="{{rewardHistory.length > 0}}">
+          <view class="activity-header" bindtap="showRewardHistory">
+            <text class="activity-title">🎉 最近奖励</text>
+            <text class="activity-more">查看全部 ›</text>
+          </view>
+          <view class="activity-item" wx:for="{{rewardHistory}}" wx:key="id">
+            <text class="activity-message">{{item.message}}</text>
+            <text class="activity-date">{{item.date}}</text>
+          </view>
+        </view>
+
+        <view class="activity-section" wx:if="{{penaltyHistory.length > 0}}">
+          <view class="activity-header" bindtap="showPenaltyHistory">
+            <text class="activity-title">⚠️ 最近惩罚</text>
+            <text class="activity-more">查看全部 ›</text>
+          </view>
+          <view class="activity-item penalty" wx:for="{{penaltyHistory}}" wx:key="id">
+            <text class="activity-message">{{item.message}}</text>
+            <text class="activity-date">{{item.date}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 成就系统 -->
     <view class="achievement-card">
       <view class="card-header">
-        <text class="card-title">学习成就</text>
+        <text class="card-title">🏆 学习成就</text>
         <text class="achievement-count">{{unlockedCount}}/{{totalAchievements}}</text>
       </view>
       <view class="achievement-list">
         <view class="achievement-item {{item.unlocked ? 'unlocked' : 'locked'}}" wx:for="{{achievements}}" wx:key="id">
           <view class="achievement-info">
-            <text class="achievement-name">{{item.name}}</text>
-            <text class="achievement-desc">{{item.description}}</text>
+            <text class="achievement-icon">{{item.icon}}</text>
+            <view class="achievement-details">
+              <text class="achievement-name">{{item.name}}</text>
+              <text class="achievement-desc">{{item.description}}</text>
+            </view>
           </view>
           <view class="achievement-status">
-            <text wx:if="{{item.unlocked}}" class="status-unlocked">已获得</text>
+            <text wx:if="{{item.unlocked}}" class="status-unlocked">✅ 已获得</text>
             <text wx:else class="status-locked">{{item.progress}}/{{item.target}}</text>
           </view>
         </view>
@@ -122,6 +191,95 @@
     <view class="modal-footer">
       <button class="btn btn-secondary" bindtap="hideExportModal">取消</button>
       <button class="btn btn-primary" bindtap="confirmExport">导出</button>
+    </view>
+  </view>
+</view>
+
+<!-- 手机使用权管理弹窗 -->
+<view class="modal-overlay {{showPhoneUsageModal ? 'show' : ''}}" bindtap="hidePhoneUsageModal">
+  <view class="modal-content" catchtap="">
+    <view class="modal-header">
+      <text class="modal-title">📱 手机使用权管理</text>
+      <button class="modal-close" bindtap="hidePhoneUsageModal">×</button>
+    </view>
+    <view class="modal-body">
+      <view class="usage-summary">
+        <text class="summary-title">当前可用时长</text>
+        <text class="summary-value">{{formatTime(phoneUsageRights)}}</text>
+      </view>
+      
+      <view class="usage-options">
+        <text class="options-title">选择使用时长</text>
+        <view class="option-buttons">
+          <button class="usage-option-btn" bindtap="usePhoneTime" data-minutes="15">
+            使用15分钟
+          </button>
+          <button class="usage-option-btn" bindtap="usePhoneTime" data-minutes="30">
+            使用30分钟
+          </button>
+          <button class="usage-option-btn" bindtap="usePhoneTime" data-minutes="60">
+            使用1小时
+          </button>
+          <button class="usage-option-btn" bindtap="usePhoneTime" data-minutes="120">
+            使用2小时
+          </button>
+        </view>
+      </view>
+      
+      <view class="usage-tips">
+        <text class="tips-title">💡 使用提示</text>
+        <text class="tips-text">• 使用时长会从总时长中扣除</text>
+        <text class="tips-text">• 手机回收期间无法使用</text>
+        <text class="tips-text">• 坚持打卡获得更多使用权</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 奖励历史弹窗 -->
+<view class="modal-overlay {{showRewardModal ? 'show' : ''}}" bindtap="hideRewardModal">
+  <view class="modal-content" catchtap="">
+    <view class="modal-header">
+      <text class="modal-title">🎉 奖励历史</text>
+      <button class="modal-close" bindtap="hideRewardModal">×</button>
+    </view>
+    <view class="modal-body">
+      <view class="history-list">
+        <view class="history-item" wx:for="{{rewardHistory}}" wx:key="id">
+          <view class="history-content">
+            <text class="history-title">{{item.title}}</text>
+            <text class="history-message">{{item.message}}</text>
+          </view>
+          <view class="history-meta">
+            <text class="history-date">{{item.date}}</text>
+            <text class="history-reward" wx:if="{{item.phoneTime}}">+{{formatTime(item.phoneTime)}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 惩罚历史弹窗 -->
+<view class="modal-overlay {{showPenaltyModal ? 'show' : ''}}" bindtap="hidePenaltyModal">
+  <view class="modal-content" catchtap="">
+    <view class="modal-header">
+      <text class="modal-title">⚠️ 惩罚历史</text>
+      <button class="modal-close" bindtap="hidePenaltyModal">×</button>
+    </view>
+    <view class="modal-body">
+      <view class="history-list">
+        <view class="history-item penalty" wx:for="{{penaltyHistory}}" wx:key="id">
+          <view class="history-content">
+            <text class="history-title">{{item.title}}</text>
+            <text class="history-message">{{item.message}}</text>
+          </view>
+          <view class="history-meta">
+            <text class="history-date">{{item.date}}</text>
+            <text class="history-penalty" wx:if="{{item.recoveryDays}}">回收{{item.recoveryDays}}天</text>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 </view>

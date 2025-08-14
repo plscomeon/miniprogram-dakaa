@@ -1,5 +1,6 @@
 // 个人中心页面逻辑
 const CloudApi = require('../../utils/cloudApi.js')
+const RewardSystem = require('./rewardSystem.js')
 
 Page({
   goToMistakes: function () {
@@ -21,11 +22,21 @@ Page({
     showExportModal: false,
     exportType: 'excel',
     dateRange: 'month',
-    cacheSize: '0KB'
+    cacheSize: '0KB',
+    // 奖励系统相关数据
+    phoneUsageRights: 0,
+    phoneRecoveryDays: 0,
+    rewardHistory: [],
+    penaltyHistory: [],
+    isPhoneRecovered: false,
+    showRewardModal: false,
+    showPenaltyModal: false,
+    showPhoneUsageModal: false
   },
 
   onLoad() {
     console.log('Profile页面：onLoad');
+    this.initRewardSystem();
     this.initPage();
   },
 
@@ -52,6 +63,28 @@ Page({
       // 显示登录提示
       this.showLoginPrompt();
     }
+  },
+
+  // 初始化奖励系统
+  initRewardSystem() {
+    this.rewardSystem = new RewardSystem();
+    this.rewardSystem.init();
+    this.updateRewardSystemData();
+  },
+
+  // 更新奖励系统数据到页面
+  updateRewardSystemData() {
+    const status = this.rewardSystem.getCurrentStatus();
+    const rewardHistory = this.rewardSystem.getRewardHistory();
+    const penaltyHistory = this.rewardSystem.getPenaltyHistory();
+    
+    this.setData({
+      phoneUsageRights: status.phoneUsageRights,
+      phoneRecoveryDays: status.phoneRecoveryDays,
+      isPhoneRecovered: status.isPhoneRecovered,
+      rewardHistory: rewardHistory.slice(0, 5), // 只显示最近5条
+      penaltyHistory: penaltyHistory.slice(0, 5)
+    });
   },
 
   // 初始化页面
@@ -796,6 +829,85 @@ Page({
           }
         });
       }, 500); // 延迟显示，避免页面切换时的冲突
+    }
+  },
+
+  // ========== 奖励系统相关方法 ==========
+
+  // 显示奖励历史
+  showRewardHistory() {
+    this.setData({ showRewardModal: true });
+  },
+
+  // 显示惩罚历史
+  showPenaltyHistory() {
+    this.setData({ showPenaltyModal: true });
+  },
+
+  // 显示手机使用权管理
+  showPhoneUsageManager() {
+    this.setData({ showPhoneUsageModal: true });
+  },
+
+  // 关闭奖励模态框
+  hideRewardModal() {
+    this.setData({ showRewardModal: false });
+  },
+
+  // 关闭惩罚模态框
+  hidePenaltyModal() {
+    this.setData({ showPenaltyModal: false });
+  },
+
+  // 关闭手机使用权模态框
+  hidePhoneUsageModal() {
+    this.setData({ showPhoneUsageModal: false });
+  },
+
+  // 使用手机时间
+  usePhoneTime(e) {
+    const { minutes } = e.currentTarget.dataset;
+    const result = this.rewardSystem.usePhoneTime(minutes);
+    
+    if (result.success) {
+      this.updateRewardSystemData();
+      wx.showToast({
+        title: result.message,
+        icon: 'success',
+        duration: 3000
+      });
+    } else {
+      wx.showModal({
+        title: '无法使用',
+        content: result.message,
+        showCancel: false,
+        confirmText: '知道了'
+      });
+    }
+  },
+
+  // 格式化时间显示
+  formatTime(minutes) {
+    if (minutes < 60) {
+      return `${minutes}分钟`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
+    }
+  },
+
+  // 获取状态颜色
+  getStatusColor(isRecovered) {
+    return isRecovered ? '#FA5151' : '#07C160';
+  },
+
+  // 获取状态文本
+  getStatusText(isRecovered, recoveryDays) {
+    if (isRecovered) {
+      return `手机已回收 ${recoveryDays}天`;
+    } else {
+      return '手机使用正常';
     }
   }
 })

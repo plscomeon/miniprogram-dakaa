@@ -1,10 +1,13 @@
 // 今日打卡页面逻辑
 const CloudApi = require('../../utils/cloudApi.js')
+const RewardSystem = require('../profile/rewardSystem.js')
 
 Page({
   onLoad() {
     // 页面加载时初始化日期
     this.updateDate();
+    // 初始化奖励系统
+    this.initRewardSystem();
   },
   data: {
     isLogin: false,
@@ -174,6 +177,12 @@ Page({
     console.log('全局用户信息:', app.globalData.userInfo);
     console.log('本地存储用户信息:', localUserInfo);
     console.log('=========================');
+  },
+
+  // 初始化奖励系统
+  initRewardSystem() {
+    this.rewardSystem = new RewardSystem();
+    this.rewardSystem.init();
   },
 
   // 更新日期显示
@@ -725,6 +734,10 @@ Page({
       
       if (result.success) {
         console.log('打卡成功')
+        
+        // 触发奖励系统
+        await this.triggerRewardSystem(data, result.data)
+        
         this.showSuccessToast()
         this.clearDraft()
         
@@ -746,6 +759,38 @@ Page({
     } finally {
       wx.hideLoading()
       this.setData({ submitting: false })
+    }
+  },
+
+  // 触发奖励系统
+  async triggerRewardSystem(checkinData, savedData) {
+    try {
+      console.log('触发奖励系统...')
+      
+      // 获取用户统计数据以计算连续天数
+      const statsResult = await CloudApi.getStats()
+      let streakDays = 1
+      
+      if (statsResult.success && statsResult.data) {
+        streakDays = statsResult.data.consecutiveDays || 1
+      }
+      
+      // 准备打卡数据
+      const rewardCheckinData = {
+        ...checkinData,
+        streakDays: streakDays,
+        date: this.data.currentDate,
+        savedData: savedData
+      }
+      
+      // 调用奖励系统
+      this.rewardSystem.onCheckinCompleted(rewardCheckinData)
+      
+      console.log('奖励系统已触发，连续天数:', streakDays)
+      
+    } catch (error) {
+      console.error('触发奖励系统失败:', error)
+      // 不影响打卡成功，只是奖励系统失败
     }
   },
 
