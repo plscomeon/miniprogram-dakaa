@@ -24,17 +24,20 @@ Page({
   async onShow() {
     console.log('Checkin页面：onShow');
     
-    // 每次进入页面，都从全局app.js同步最新的登录状态
-    await this.syncLoginStatus();
-    
     // 更新日期显示
     this.updateDate();
+    
+    // 每次进入页面，都从全局app.js同步最新的登录状态
+    await this.syncLoginStatus();
     
     // 如果已登录，则加载今天的打卡记录
     if (this.data.isLogin) {
       this.generateMotivationText(); // 生成激励语
       this.loadDraft();
       this.checkTodayRecord();
+    } else {
+      // 如果未登录，检查是否是第一次进入，如果是则主动获取授权
+      this.checkFirstTimeAndRequestAuth();
     }
     
     // 设置用户信息更新监听
@@ -52,6 +55,49 @@ Page({
     // 如果已登录，则保存草稿
     if (this.data.isLogin) {
       this.saveDraft();
+    }
+  },
+
+  // 检查是否第一次进入并请求授权
+  async checkFirstTimeAndRequestAuth() {
+    try {
+      // 检查是否已经请求过授权
+      const hasRequestedAuth = wx.getStorageSync('hasRequestedAuth');
+      const localUserInfo = wx.getStorageSync('userInfo');
+      
+      // 如果没有请求过授权且没有本地用户信息，则主动请求
+      if (!hasRequestedAuth && (!localUserInfo || !localUserInfo.nickName || localUserInfo.nickName === '微信用户')) {
+        console.log('Checkin页面：第一次进入且无用户信息，主动请求用户授权');
+        
+        // 延迟一下，让页面完全加载
+        setTimeout(() => {
+          wx.showModal({
+            title: '欢迎使用学习打卡',
+            content: '为了更好地为您提供服务，需要获取您的微信头像和昵称',
+            confirmText: '授权登录',
+            cancelText: '暂不登录',
+            success: (res) => {
+              if (res.confirm) {
+                this.oneClickLogin();
+              }
+              // 标记已经请求过授权
+              wx.setStorageSync('hasRequestedAuth', true);
+            }
+          });
+        }, 800);
+      } else if (localUserInfo && localUserInfo.nickName && localUserInfo.nickName !== '微信用户') {
+        // 如果有本地用户信息，但页面状态未同步，则同步状态
+        console.log('Checkin页面：发现本地用户信息，同步到页面状态');
+        this.setData({
+          userInfo: localUserInfo,
+          isLogin: true
+        });
+        this.generateMotivationText();
+        this.loadDraft();
+        this.checkTodayRecord();
+      }
+    } catch (error) {
+      console.error('Checkin页面：检查首次授权失败:', error);
     }
   },
 
@@ -543,14 +589,6 @@ Page({
   submitCheckin: async function() {
     if (this.data.submitting) return;
     
-    if (!this.data.isLogin) {
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none'
-      });
-      return;
-    }
-
     // 验证必填内容
     const hasQuestions = this.data.questions.some(q => q.trim() !== '');
     const hasDiary = this.data.diary.trim() !== '';
@@ -563,6 +601,45 @@ Page({
       return;
     }
 
+    // 检查登录状态，如果未登录则先登录
+    if (!this.data.isLogin) {
+      console.log('Checkin页面：用户未登录，提交打卡时自动登录');
+      
+      wx.showModal({
+        title: '需要登录',
+        content: '提交打卡需要先登录，是否立即登录？',
+        confirmText: '立即登录',
+        cancelText: '取消',
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              // 先进行登录
+              await this.oneClickLogin();
+              
+              // 登录成功后自动提交打卡
+              setTimeout(() => {
+                if (this.data.isLogin) {
+                  console.log('Checkin页面：登录成功，自动提交打卡');
+                  this.doSubmitCheckin();
+                }
+              }, 1000);
+            } catch (error) {
+              console.error('Checkin页面：登录失败，无法提交打卡:', error);
+            }
+          }
+        }
+      });
+      return;
+    }
+
+    // 如果已登录，直接提交
+    this.doSubmitCheckin();
+  },
+
+  // 执行提交打卡的具体逻辑
+  doSubmitCheckin: async function() {
+    if (this.data.submitting) return;
+    
     this.setData({ submitting: true });
 
     try {

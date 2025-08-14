@@ -39,7 +39,11 @@ Page({
     await this.getUserInfo();
     
     // 只有在用户已登录的情况下才加载数据
-    if (this.data.userInfo && this.data.userInfo.nickName && this.data.userInfo.nickName !== '未登录') {
+    if (this.data.userInfo && this.data.userInfo.nickName && 
+        this.data.userInfo.nickName !== '未登录' && 
+        this.data.userInfo.nickName !== '微信用户' &&
+        this.data.userInfo.nickName.trim() !== '') {
+      console.log('Profile页面：用户已登录，加载数据');
       this.loadUserData();
     } else {
       console.log('Profile页面：用户未登录，显示登录提示');
@@ -80,6 +84,7 @@ Page({
           // 同步到全局状态
           app.globalData.userInfo = userInfo;
           app.globalData.isLoggedIn = true;
+          console.log('Profile页面：从本地存储同步用户信息到全局状态');
         }
       }
       
@@ -94,15 +99,27 @@ Page({
             userInfo = cloudResult.data;
             // 更新全局状态和本地存储
             app.setUserInfo(userInfo);
+            console.log('Profile页面：从云端获取用户信息并更新全局状态');
           }
         } catch (cloudError) {
           console.error('Profile页面：从云端获取用户信息失败:', cloudError);
         }
       }
       
-      // 4. 设置用户信息到页面
-      if (userInfo && userInfo.nickName && userInfo.nickName !== '微信用户') {
+      // 4. 检查用户信息的有效性
+      const hasValidUserInfo = userInfo && 
+                              userInfo.nickName && 
+                              userInfo.nickName !== '微信用户' && 
+                              userInfo.nickName !== '未登录' &&
+                              userInfo.nickName.trim() !== '';
+      
+      // 5. 设置用户信息到页面
+      if (hasValidUserInfo) {
         console.log('Profile页面：设置有效用户信息:', userInfo);
+        // 确保头像URL正确
+        if (userInfo.avatarUrl && userInfo.avatarUrl.startsWith('http://')) {
+          userInfo.avatarUrl = userInfo.avatarUrl.replace('http://', 'https://');
+        }
         this.setData({ userInfo });
       } else {
         console.log('Profile页面：没有有效用户信息，显示默认状态');
@@ -129,7 +146,16 @@ Page({
   updateUserInfo(userInfo) {
     console.log('Profile页面：收到用户信息更新通知:', userInfo);
     
-    if (userInfo && userInfo.nickName && userInfo.nickName !== '微信用户' && userInfo.nickName !== '未登录') {
+    if (userInfo && userInfo.nickName && 
+        userInfo.nickName !== '微信用户' && 
+        userInfo.nickName !== '未登录' &&
+        userInfo.nickName.trim() !== '') {
+      
+      // 确保头像URL正确
+      if (userInfo.avatarUrl && userInfo.avatarUrl.startsWith('http://')) {
+        userInfo.avatarUrl = userInfo.avatarUrl.replace('http://', 'https://');
+      }
+      
       this.setData({ userInfo: userInfo });
       console.log('Profile页面：用户信息已更新到:', userInfo);
       
@@ -138,9 +164,9 @@ Page({
         console.log('Profile页面：检测到用户登录，重新加载数据');
         this.loadUserData();
       }
-    } else if (userInfo === null) {
-      // 用户退出登录
-      console.log('Profile页面：用户已退出登录，清空数据');
+    } else {
+      // 用户退出登录或信息无效
+      console.log('Profile页面：用户已退出登录或信息无效，清空数据');
       this.setData({
         userInfo: {
           nickName: '未登录',
@@ -483,41 +509,26 @@ Page({
   changeAvatar() {
     // 检查用户是否已登录
     if (!this.data.userInfo || !this.data.userInfo.nickName || this.data.userInfo.nickName === '未登录') {
-      // 未登录，跳转到打卡页面进行登录
+      // 未登录，跳转到用户信息完善页面
       wx.showModal({
         title: '需要登录',
-        content: '请先登录后再使用个人中心功能',
-        confirmText: '去登录',
+        content: '请先完善个人信息后再使用个人中心功能',
+        confirmText: '去完善',
         cancelText: '取消',
         success: (res) => {
           if (res.confirm) {
-            wx.switchTab({
-              url: '/pages/checkin/checkin'
-            });
+            wx.navigateTo({
+              url: '/pages/userProfile/userProfile?from=pages/profile/profile'
+            })
           }
         }
       });
       return;
     }
 
-    // 已登录，允许更换头像
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      maxDuration: 30,
-      camera: 'back',
-      success: (res) => {
-        const tempFilePath = res.tempFiles[0].tempFilePath
-        this.updateAvatar(tempFilePath)
-      },
-      fail: (error) => {
-        console.error('选择头像失败:', error)
-        wx.showToast({
-          title: '选择头像失败',
-          icon: 'error'
-        })
-      }
+    // 已登录，跳转到用户信息完善页面进行修改
+    wx.navigateTo({
+      url: '/pages/userProfile/userProfile?from=pages/profile/profile'
     })
   },
 

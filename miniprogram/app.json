@@ -4,7 +4,8 @@
     "pages/history/history",
     "pages/profile/profile",
     "pages/record-detail/record-detail",
-    "pages/mistakes/mistakes"
+    "pages/mistakes/mistakes",
+    "pages/userProfile/userProfile"
   ],
   "window": {
     "backgroundColor": "#F9FAFB",

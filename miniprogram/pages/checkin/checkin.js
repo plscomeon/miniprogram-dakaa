@@ -33,11 +33,17 @@ Page({
     // 更新日期显示
     this.updateDate();
     
+    // 检查是否需要完善用户信息
+    await this.checkUserProfile();
+    
     // 如果已登录，则加载今天的打卡记录
     if (this.data.isLogin) {
       this.generateMotivationText(); // 生成激励语
       this.loadDraft();
       this.checkTodayRecord();
+      
+      // 检查是否有待提交的打卡
+      this.checkPendingSubmit();
     }
     
     // 设置用户信息更新监听
@@ -49,6 +55,60 @@ Page({
         isLogin: true
       });
     };
+  },
+
+  /**
+   * 检查是否需要完善用户信息
+   */
+  async checkUserProfile() {
+    const app = getApp()
+    const userInfo = app.globalData.userInfo
+    
+    // 如果没有用户信息，不需要检查
+    if (!userInfo) {
+      return
+    }
+    
+    // 检查用户信息是否完整（有昵称且不是默认昵称，有头像且不是默认头像）
+    const hasValidNickname = userInfo.nickName && 
+                            userInfo.nickName.trim() && 
+                            userInfo.nickName !== '微信用户' && 
+                            userInfo.nickName !== '学习者'
+    
+    const hasValidAvatar = userInfo.avatarUrl && 
+                          userInfo.avatarUrl !== '/images/default-avatar.png' &&
+                          !userInfo.avatarUrl.includes('default-avatar')
+    
+    console.log('用户信息检查:', {
+      hasValidNickname,
+      hasValidAvatar,
+      nickName: userInfo.nickName,
+      avatarUrl: userInfo.avatarUrl
+    })
+    
+    // 如果信息不完整，引导用户完善
+    if (!hasValidNickname || !hasValidAvatar) {
+      // 检查是否已经提示过（避免重复提示）
+      const hasPrompted = wx.getStorageSync('profile_prompted_' + (userInfo._openid || 'temp'))
+      if (!hasPrompted) {
+        wx.showModal({
+          title: '完善个人信息',
+          content: '为了更好的使用体验，建议您完善头像和昵称信息',
+          confirmText: '去完善',
+          cancelText: '稍后再说',
+          success: (res) => {
+            if (res.confirm) {
+              wx.navigateTo({
+                url: '/pages/userProfile/userProfile?from=pages/checkin/checkin'
+              })
+            } else {
+              // 记录已提示过，避免重复提示
+              wx.setStorageSync('profile_prompted_' + (userInfo._openid || 'temp'), true)
+            }
+          }
+        })
+      }
+    }
   },
 
   onHide() {
@@ -167,9 +227,10 @@ Page({
   // 显示登录弹窗
   showLoginModal() {
     console.log('Checkin页面：显示登录弹窗');
-    this.setData({ 
-      showLoginModal: true
-    });
+    // 直接跳转到用户信息完善页面
+    wx.navigateTo({
+      url: '/pages/userProfile/userProfile?from=pages/checkin/checkin'
+    })
   },
 
   // 隐藏登录弹窗
@@ -606,14 +667,17 @@ Page({
       console.log('用户未登录，需要先获取授权')
       wx.showModal({
         title: '需要登录',
-        content: '提交打卡需要获取您的微信信息，是否授权登录？',
+        content: '提交打卡需要完善您的个人信息，是否前往设置？',
         showCancel: true,
         cancelText: '取消',
-        confirmText: '授权登录',
+        confirmText: '去设置',
         success: (res) => {
           if (res.confirm) {
-            // 直接调用登录流程，标记来自提交打卡
-            this.oneClickLogin(true);
+            // 标记来自提交打卡，完善信息后自动提交
+            wx.setStorageSync('pending_submit_checkin', true)
+            wx.navigateTo({
+              url: '/pages/userProfile/userProfile?from=pages/checkin/checkin'
+            })
           }
         }
       });
@@ -785,6 +849,31 @@ Page({
 
   clearDraft() {
     wx.removeStorageSync('checkin_draft')
+  },
+
+  /**
+   * 检查是否有待提交的打卡
+   */
+  checkPendingSubmit() {
+    const pendingSubmit = wx.getStorageSync('pending_submit_checkin')
+    if (pendingSubmit) {
+      wx.removeStorageSync('pending_submit_checkin')
+      
+      // 延迟一下再提交，确保页面状态已更新
+      setTimeout(() => {
+        wx.showModal({
+          title: '继续提交打卡',
+          content: '您刚才正在提交打卡，是否继续？',
+          confirmText: '继续提交',
+          cancelText: '取消',
+          success: (res) => {
+            if (res.confirm) {
+              this.submitCheckin()
+            }
+          }
+        })
+      }, 500)
+    }
   },
 
   // 下载头像到本地临时文件

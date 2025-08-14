@@ -211,17 +211,76 @@ App({
     } catch (error) {
       console.error('App：清除本地存储失败:', error);
     }
+    
+    // 通知所有页面用户已退出登录
+    this.notifyPagesUserInfoUpdate(null);
   },
 
   // 通知所有页面更新用户信息
   notifyPagesUserInfoUpdate: function(userInfo) {
+    console.log('App：通知所有页面更新用户信息:', userInfo);
+    
     // 获取当前页面栈
     const pages = getCurrentPages();
+    console.log('App：当前页面栈长度:', pages.length);
     
     // 通知所有页面更新用户信息
-    pages.forEach(page => {
+    pages.forEach((page, index) => {
       if (page.updateUserInfo && typeof page.updateUserInfo === 'function') {
+        console.log(`App：通知第${index}个页面更新用户信息`);
         page.updateUserInfo(userInfo);
+      } else if (page.route) {
+        console.log(`App：页面 ${page.route} 没有updateUserInfo方法`);
+      }
+    });
+    
+    // 特别处理打卡页面的用户信息更新
+    pages.forEach(page => {
+      if (page.route && page.route.includes('checkin') && page.setData) {
+        console.log('App：特别更新打卡页面的用户信息');
+        const isValidUser = userInfo && userInfo.nickName && userInfo.nickName !== '微信用户' && userInfo.nickName !== '未登录';
+        page.setData({
+          userInfo: isValidUser ? userInfo : {},
+          isLogin: isValidUser
+        });
+      }
+    });
+    
+    // 特别处理历史记录页面
+    pages.forEach(page => {
+      if (page.route && page.route.includes('history') && page.setData) {
+        console.log('App：特别更新历史记录页面的用户信息');
+        if (!userInfo || !userInfo.nickName || userInfo.nickName === '微信用户' || userInfo.nickName === '未登录') {
+          // 用户退出登录，清空历史记录页面数据
+          page.setData({
+            totalDays: 0,
+            streakDays: 0,
+            monthDays: 0,
+            records: []
+          });
+          if (page.generateCalendar) {
+            page.generateCalendar();
+          }
+        }
+      }
+    });
+    
+    // 特别处理个人中心页面
+    pages.forEach(page => {
+      if (page.route && page.route.includes('profile') && page.setData) {
+        console.log('App：特别更新个人中心页面的用户信息');
+        if (!userInfo || !userInfo.nickName || userInfo.nickName === '微信用户' || userInfo.nickName === '未登录') {
+          // 用户退出登录，清空个人中心数据
+          page.setData({
+            userInfo: {
+              nickName: '未登录',
+              avatarUrl: '/images/default-avatar.png'
+            }
+          });
+          if (page.clearAllData) {
+            page.clearAllData();
+          }
+        }
       }
     });
   },

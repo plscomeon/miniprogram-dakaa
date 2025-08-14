@@ -38,9 +38,34 @@ Page({
   // 检查登录状态并加载数据
   checkLoginAndLoadData() {
     const app = getApp()
-    const userInfo = app.getValidUserInfo()
     
-    if (!userInfo || !userInfo.nickName || userInfo.nickName === '未登录') {
+    // 多重检查用户登录状态
+    const globalUserInfo = app.globalData.userInfo
+    const localUserInfo = wx.getStorageSync('userInfo')
+    const isLoggedIn = app.globalData.isLoggedIn
+    
+    console.log('History页面：检查登录状态')
+    console.log('History页面：全局用户信息:', globalUserInfo)
+    console.log('History页面：本地用户信息:', localUserInfo)
+    console.log('History页面：全局登录状态:', isLoggedIn)
+    
+    // 优先使用全局用户信息，其次使用本地存储
+    let userInfo = globalUserInfo
+    if (!userInfo || !userInfo.nickName || userInfo.nickName === '微信用户' || userInfo.nickName === '未登录') {
+      userInfo = localUserInfo
+    }
+    
+    // 检查用户信息是否有效
+    const hasValidUserInfo = userInfo && 
+                            userInfo.nickName && 
+                            userInfo.nickName !== '微信用户' && 
+                            userInfo.nickName !== '未登录' &&
+                            userInfo.nickName.trim() !== ''
+    
+    console.log('History页面：用户信息有效性:', hasValidUserInfo)
+    console.log('History页面：最终用户信息:', userInfo)
+    
+    if (!hasValidUserInfo) {
       console.log('History页面：用户未登录，显示空数据')
       this.setData({
         totalDays: 0,
@@ -50,20 +75,30 @@ Page({
       })
       this.generateCalendar() // 重新生成空日历
       
-      // 显示登录提示
-      wx.showModal({
-        title: '需要登录',
-        content: '查看打卡记录需要先登录，是否前往登录？',
-        confirmText: '去登录',
-        cancelText: '取消',
-        success: (res) => {
-          if (res.confirm) {
-            wx.switchTab({
-              url: '/pages/checkin/checkin'
-            })
-          }
-        }
-      })
+      // 只在第一次显示时弹出提示，避免重复弹出
+      if (!this.loginPromptShown) {
+        this.loginPromptShown = true;
+        
+        setTimeout(() => {
+          wx.showModal({
+            title: '需要登录',
+            content: '查看打卡记录需要先登录，是否前往登录？',
+            confirmText: '去登录',
+            cancelText: '取消',
+            success: (res) => {
+              if (res.confirm) {
+                wx.switchTab({
+                  url: '/pages/checkin/checkin'
+                })
+              }
+            },
+            complete: () => {
+              // 重置标记，下次进入页面时可以再次显示
+              this.loginPromptShown = false;
+            }
+          })
+        }, 500);
+      }
       return
     }
     
@@ -82,9 +117,22 @@ Page({
     try {
       // 检查用户登录状态
       const app = getApp()
-      const userInfo = app.getValidUserInfo()
+      const globalUserInfo = app.globalData.userInfo
+      const localUserInfo = wx.getStorageSync('userInfo')
       
-      if (!userInfo || !userInfo.nickName || userInfo.nickName === '未登录') {
+      // 优先使用全局用户信息，其次使用本地存储
+      let userInfo = globalUserInfo
+      if (!userInfo || !userInfo.nickName || userInfo.nickName === '微信用户') {
+        userInfo = localUserInfo
+      }
+      
+      const hasValidUserInfo = userInfo && 
+                              userInfo.nickName && 
+                              userInfo.nickName !== '微信用户' && 
+                              userInfo.nickName !== '未登录' &&
+                              userInfo.nickName.trim() !== ''
+      
+      if (!hasValidUserInfo) {
         console.log('History页面：用户未登录，跳过统计数据加载')
         this.setData({
           totalDays: 0,
@@ -94,15 +142,18 @@ Page({
         return
       }
 
+      console.log('History页面：开始加载统计数据，用户信息:', userInfo)
       const result = await CloudApi.getStats()
       if (result.success) {
         const stats = result.data
+        console.log('History页面：统计数据加载成功:', stats)
         this.setData({
           totalDays: stats.totalDays || 0,
           streakDays: stats.consecutiveDays || 0,
           monthDays: stats.monthlyDays || 0
         })
       } else {
+        console.log('History页面：统计数据加载失败，使用默认值')
         // 如果获取失败，设置为0
         this.setData({
           totalDays: 0,
@@ -111,7 +162,7 @@ Page({
         })
       }
     } catch (error) {
-      console.error('加载统计数据失败:', error)
+      console.error('History页面：加载统计数据失败:', error)
       this.setData({
         totalDays: 0,
         streakDays: 0,
@@ -125,9 +176,22 @@ Page({
     try {
       // 检查用户登录状态
       const app = getApp()
-      const userInfo = app.getValidUserInfo()
+      const globalUserInfo = app.globalData.userInfo
+      const localUserInfo = wx.getStorageSync('userInfo')
       
-      if (!userInfo || !userInfo.nickName || userInfo.nickName === '未登录') {
+      // 优先使用全局用户信息，其次使用本地存储
+      let userInfo = globalUserInfo
+      if (!userInfo || !userInfo.nickName || userInfo.nickName === '微信用户') {
+        userInfo = localUserInfo
+      }
+      
+      const hasValidUserInfo = userInfo && 
+                              userInfo.nickName && 
+                              userInfo.nickName !== '微信用户' && 
+                              userInfo.nickName !== '未登录' &&
+                              userInfo.nickName.trim() !== ''
+      
+      if (!hasValidUserInfo) {
         console.log('History页面：用户未登录，跳过记录加载')
         this.setData({ records: [] })
         this.generateCalendar()
@@ -140,15 +204,18 @@ Page({
       const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`
       const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-31`
       
+      console.log('History页面：开始加载记录，用户信息:', userInfo)
+      console.log('History页面：查询日期范围:', startDate, '到', endDate)
+      
       const result = await CloudApi.getCheckinRecords({
         startDate,
         endDate
       })
       
       if (result.success) {
-        // 注意：CloudApi.getCheckinRecords 应该已经在云函数中过滤了当前用户的记录
-        // 如果没有过滤，这里会显示所有用户的记录，这是需要修复的问题
+        // CloudApi.getCheckinRecords 已经在云函数中按用户openid过滤了记录
         const allRecords = result.data
+        console.log('History页面：获取到记录数量:', allRecords.length)
         
         // 格式化记录数据
         const formattedRecords = allRecords.map(record => {
@@ -182,9 +249,16 @@ Page({
         
         this.setData({ records: formattedRecords })
         this.generateCalendar() // 重新生成日历以显示打卡标记
+        console.log('History页面：记录数据格式化完成，记录数量:', formattedRecords.length)
+      } else {
+        console.log('History页面：获取记录失败:', result.message)
+        this.setData({ records: [] })
+        this.generateCalendar()
       }
     } catch (error) {
-      console.error('加载记录失败:', error)
+      console.error('History页面：加载记录失败:', error)
+      this.setData({ records: [] })
+      this.generateCalendar()
       wx.showToast({
         title: '加载记录失败',
         icon: 'error'
