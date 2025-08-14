@@ -383,6 +383,9 @@
 
 .module-content {
   padding: 32rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 /* ==================== 问题模块 ==================== */
@@ -402,12 +405,15 @@
   min-height: 140rpx;
   border: 1rpx solid #e2e8f0;
   border-radius: 12rpx;
-  padding: 20rpx;
+  padding: 24rpx;
   font-size: 30rpx;
   color: #1a1a1a;
   background: #f8fafc;
   line-height: 1.6;
   transition: all 0.3s ease;
+  box-sizing: border-box;
+  text-align: left;
+  vertical-align: top;
 }
 
 .question-input:focus {
@@ -478,6 +484,7 @@
 /* ==================== 错题图片上传 ==================== */
 .mistake-images-section {
   margin-top: 20rpx;
+  width: 100%;
 }
 
 .mistake-images-grid {
@@ -485,6 +492,8 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 20rpx;
   margin-bottom: 20rpx;
+  width: 100%;
+  justify-items: center;
 }
 
 .mistake-image-item {
@@ -566,13 +575,16 @@
   min-height: 240rpx;
   border: 1rpx solid #e2e8f0;
   border-radius: 12rpx;
-  padding: 20rpx;
+  padding: 24rpx;
   font-size: 30rpx;
   color: #1a1a1a;
   background: #f8fafc;
   line-height: 1.6;
   margin-bottom: 16rpx;
   transition: all 0.3s ease;
+  box-sizing: border-box;
+  text-align: left;
+  vertical-align: top;
 }
 
 .diary-input:focus {
@@ -587,17 +599,27 @@
   color: #6c757d;
   margin-bottom: 32rpx;
   font-weight: 500;
+  padding: 0 8rpx;
+  background: rgba(108, 117, 125, 0.08);
+  border-radius: 8rpx;
+  display: inline-block;
+  align-self: flex-end;
+  padding: 8rpx 16rpx;
+  margin-top: 8rpx;
 }
 
 /* ==================== 图片网格 ==================== */
 .images-section {
   margin-top: 32rpx;
+  width: 100%;
 }
 
 .images-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20rpx;
+  width: 100%;
+  justify-items: center;
 }
 
 .image-item {
@@ -674,33 +696,44 @@
 
 /* ==================== 提交按钮 ==================== */
 .submit-section {
-  padding: 40rpx;
+  padding: 40rpx 32rpx;
   margin-top: 40rpx;
+  display: flex;
+  justify-content: center;
 }
 
 .btn-primary {
-  background: #07c160;
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
   color: #ffffff;
   border: none;
+  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
 }
 
 .btn-submit {
   width: 100%;
-  height: 88rpx;
+  height: 96rpx;
   font-size: 32rpx;
-  font-weight: 500;
-  border-radius: 8rpx;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  border-radius: 20rpx;
+  transition: all 0.3s ease;
+  letter-spacing: 1rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-submit::after {
+  border: none;
 }
 
 .btn-submit:disabled {
-  background: #d1d5db;
+  background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
   color: #ffffff;
+  box-shadow: none;
 }
 
 .btn-submit:active:not(:disabled) {
   transform: translateY(2rpx);
-  box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.4);
+  box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.5);
 }
 
 /* ==================== 成功提示 ==================== */
@@ -744,4 +777,57 @@
   font-size: 30rpx;
   font-weight: 600;
   letter-spacing: 0.5rpx;
+}
+
+/* ==================== 响应式设计 ==================== */
+@media (max-width: 375px) {
+  .module-content {
+    padding: 24rpx;
+  }
+  
+  .diary-input, .question-input {
+    font-size: 28rpx;
+    padding: 20rpx;
+  }
+  
+  .submit-section {
+    padding: 32rpx 24rpx;
+  }
+  
+  .checkin-modules {
+    padding: 0 24rpx;
+  }
+}
+
+@media (min-width: 768px) {
+  .checkin-modules {
+    max-width: 600rpx;
+    margin: 0 auto;
+  }
+  
+  .submit-section {
+    max-width: 600rpx;
+    margin: 40rpx auto 0;
+  }
+}
+
+/* ==================== 输入框优化 ==================== */
+.diary-input::placeholder,
+.question-input::placeholder {
+  color: #9ca3af;
+  font-size: 28rpx;
+  opacity: 0.8;
+}
+
+/* ==================== 焦点状态优化 ==================== */
+.diary-input:focus,
+.question-input:focus {
+  outline: none;
+  border-width: 2rpx;
+}
+
+/* ==================== 动画优化 ==================== */
+.module-card:hover {
+  transform: translateY(-2rpx);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
 }
