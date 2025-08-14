@@ -881,6 +881,28 @@
   font-weight: bold;
 }
 
+/* 重新计算按钮 */
+.recalculate-btn {
+  margin-top: 24rpx;
+  padding: 20rpx 32rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12rpx;
+  border: none;
+  box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.recalculate-btn:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 8rpx rgba(102, 126, 234, 0.4);
+}
+
+.recalculate-btn .btn-text {
+  font-size: 26rpx;
+  color: #fff;
+  font-weight: 500;
+}
+
 /* 响应式设计 */
 @media (max-width: 375px) {
   .usage-info {

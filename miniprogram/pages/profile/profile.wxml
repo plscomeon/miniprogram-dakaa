@@ -287,6 +287,9 @@
           <text class="tips-item">• 忘记打卡会被扣除使用权</text>
           <text class="tips-item">• 使用时长实时从余额中扣除</text>
         </view>
+        <button class="recalculate-btn" bindtap="recalculateRewards">
+          <text class="btn-text">🔄 重新计算数据</text>
+        </button>
       </view>
     </view>
   </view>

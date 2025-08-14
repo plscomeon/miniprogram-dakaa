@@ -71,6 +71,8 @@ Page({
     try {
       const result = await this.rewardSystem.init();
       if (result.success) {
+        // 重新计算奖励数据以确保数据一致性
+        await this.rewardSystem.recalculateRewards();
         await this.updateRewardSystemData();
       } else {
         console.error('初始化奖励系统失败:', result.message);
@@ -878,6 +880,42 @@ Page({
       return `手机已回收 ${recoveryDays}天`;
     } else {
       return '手机使用正常';
+    }
+  },
+
+  // 重新计算奖励数据
+  async recalculateRewards() {
+    wx.showLoading({ title: '重新计算中...' });
+    
+    try {
+      const result = await this.rewardSystem.recalculateRewards();
+      
+      wx.hideLoading();
+      
+      if (result.success) {
+        await this.updateRewardSystemData();
+        wx.showToast({
+          title: '数据已重新计算',
+          icon: 'success',
+          duration: 2000
+        });
+      } else {
+        wx.showModal({
+          title: '计算失败',
+          content: result.message,
+          showCancel: false,
+          confirmText: '知道了'
+        });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      console.error('重新计算奖励失败:', error);
+      wx.showModal({
+        title: '操作失败',
+        content: '网络异常，请稍后重试',
+        showCancel: false,
+        confirmText: '知道了'
+      });
     }
   }
 })

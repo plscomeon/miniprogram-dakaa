@@ -353,6 +353,21 @@ class CloudApi {
       return { success: false, message: error.message }
     }
   }
+
+  static async recalculateRewards() {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'rewardManager',
+        data: {
+          action: 'recalculateRewards'
+        }
+      })
+      return result.result
+    } catch (error) {
+      console.error('重新计算奖励失败:', error)
+      return { success: false, message: error.message }
+    }
+  }
 }
 
 module.exports = CloudApi
