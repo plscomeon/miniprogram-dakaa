@@ -32,6 +32,29 @@
       </view>
     </view>
 
+    <!-- 成就系统 -->
+    <view class="achievement-card">
+      <view class="card-header">
+        <text class="card-title">🏆 学习成就</text>
+        <text class="achievement-count">{{unlockedCount}}/{{totalAchievements}}</text>
+      </view>
+      <view class="achievement-list">
+        <view class="achievement-item {{item.unlocked ? 'unlocked' : 'locked'}}" wx:for="{{achievements}}" wx:key="id">
+          <view class="achievement-info">
+            <text class="achievement-icon">{{item.icon}}</text>
+            <view class="achievement-details">
+              <text class="achievement-name">{{item.name}}</text>
+              <text class="achievement-desc">{{item.description}}</text>
+            </view>
+          </view>
+          <view class="achievement-status">
+            <text wx:if="{{item.unlocked}}" class="status-unlocked">✅ 已获得</text>
+            <text wx:else class="status-locked">{{item.progress}}/{{item.target}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 奖励系统 -->
     <view class="reward-system-card">
       <view class="card-header">
@@ -93,29 +116,6 @@
           <view class="activity-item penalty" wx:for="{{penaltyHistory}}" wx:key="id">
             <text class="activity-message">{{item.message}}</text>
             <text class="activity-date">{{item.date}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- 成就系统 -->
-    <view class="achievement-card">
-      <view class="card-header">
-        <text class="card-title">🏆 学习成就</text>
-        <text class="achievement-count">{{unlockedCount}}/{{totalAchievements}}</text>
-      </view>
-      <view class="achievement-list">
-        <view class="achievement-item {{item.unlocked ? 'unlocked' : 'locked'}}" wx:for="{{achievements}}" wx:key="id">
-          <view class="achievement-info">
-            <text class="achievement-icon">{{item.icon}}</text>
-            <view class="achievement-details">
-              <text class="achievement-name">{{item.name}}</text>
-              <text class="achievement-desc">{{item.description}}</text>
-            </view>
-          </view>
-          <view class="achievement-status">
-            <text wx:if="{{item.unlocked}}" class="status-unlocked">✅ 已获得</text>
-            <text wx:else class="status-locked">{{item.progress}}/{{item.target}}</text>
           </view>
         </view>
       </view>
