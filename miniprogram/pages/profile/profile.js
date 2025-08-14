@@ -15,7 +15,7 @@ Page({
     totalWords: 0,
     totalMistakes: 0,
     achievements: [],
-    totalAchievements: 8,
+    totalAchievements: 3,
     unlockedCount: 0,
     reminderEnabled: true,
     syncEnabled: false,
@@ -396,51 +396,6 @@ Page({
         target: 30,
         progress: 0,
         unlocked: false
-      },
-      {
-        id: 4,
-        name: '视频专家',
-        description: '上传10个学习视频',
-        icon: '🎬',
-        target: 10,
-        progress: 0,
-        unlocked: false
-      },
-      {
-        id: 5,
-        name: '文字记录者',
-        description: '累计记录10000字',
-        icon: '📝',
-        target: 10000,
-        progress: 0,
-        unlocked: false
-      },
-      {
-        id: 6,
-        name: '百日学者',
-        description: '累计打卡100天',
-        icon: '🏆',
-        target: 100,
-        progress: 0,
-        unlocked: false
-      },
-      {
-        id: 7,
-        name: '月度冠军',
-        description: '单月打卡30天',
-        icon: '👑',
-        target: 30,
-        progress: 0,
-        unlocked: false
-      },
-      {
-        id: 8,
-        name: '学习大师',
-        description: '连续打卡100天',
-        icon: '🎓',
-        target: 100,
-        progress: 0,
-        unlocked: false
       }
     ]
     
@@ -449,7 +404,7 @@ Page({
 
   // 更新成就进度
   updateAchievements() {
-    const { totalDays, streakDays, totalVideos, totalWords } = this.data
+    const { totalDays, streakDays } = this.data
     const achievements = this.data.achievements.map(achievement => {
       let progress = 0
       
@@ -462,21 +417,6 @@ Page({
           break
         case 3: // 学习达人
           progress = totalDays
-          break
-        case 4: // 视频专家
-          progress = totalVideos
-          break
-        case 5: // 文字记录者
-          progress = totalWords
-          break
-        case 6: // 百日学者
-          progress = totalDays
-          break
-        case 7: // 月度冠军
-          progress = this.getMonthlyDays()
-          break
-        case 8: // 学习大师
-          progress = streakDays
           break
       }
       
@@ -496,19 +436,6 @@ Page({
     })
   },
 
-  // 获取本月打卡天数
-  async getMonthlyDays() {
-    try {
-      const statsResult = await CloudApi.getStats()
-      if (statsResult.success) {
-        return statsResult.data.monthlyDays
-      }
-      return 0
-    } catch (error) {
-      console.error('获取本月打卡天数失败:', error)
-      return 0
-    }
-  },
 
   // 加载设置
   loadSettings() {
