@@ -21,29 +21,53 @@ Page({
   },
 
   onLoad() {
-    // 检查全局登录状态
-    const app = getApp()
-    if (!app.isUserLoggedIn()) {
-      console.log('用户未登录，显示空数据')
-      // 可以选择跳转到登录页面或显示提示
-      wx.showToast({
-        title: '请先完善个人信息',
-        icon: 'none',
-        duration: 2000
-      })
-    }
-    
     this.initPage()
   },
 
   onShow() {
-    // 每次显示页面时重新加载数据，确保显示最新的用户数据
-    this.loadData()
+    // 每次显示页面时检查登录状态并加载数据
+    this.checkLoginAndLoadData()
   },
 
   // 初始化页面
   initPage() {
     this.generateCalendar()
+    this.checkLoginAndLoadData()
+  },
+
+  // 检查登录状态并加载数据
+  checkLoginAndLoadData() {
+    const app = getApp()
+    const userInfo = app.getValidUserInfo()
+    
+    if (!userInfo || !userInfo.nickName || userInfo.nickName === '未登录') {
+      console.log('History页面：用户未登录，显示空数据')
+      this.setData({
+        totalDays: 0,
+        streakDays: 0,
+        monthDays: 0,
+        records: []
+      })
+      this.generateCalendar() // 重新生成空日历
+      
+      // 显示登录提示
+      wx.showModal({
+        title: '需要登录',
+        content: '查看打卡记录需要先登录，是否前往登录？',
+        confirmText: '去登录',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({
+              url: '/pages/checkin/checkin'
+            })
+          }
+        }
+      })
+      return
+    }
+    
+    console.log('History页面：用户已登录，加载数据')
     this.loadData()
   },
 
@@ -56,26 +80,63 @@ Page({
   // 加载统计数据
   async loadStatistics() {
     try {
+      // 检查用户登录状态
+      const app = getApp()
+      const userInfo = app.getValidUserInfo()
+      
+      if (!userInfo || !userInfo.nickName || userInfo.nickName === '未登录') {
+        console.log('History页面：用户未登录，跳过统计数据加载')
+        this.setData({
+          totalDays: 0,
+          streakDays: 0,
+          monthDays: 0
+        })
+        return
+      }
+
       const result = await CloudApi.getStats()
       if (result.success) {
         const stats = result.data
         this.setData({
-          totalDays: stats.totalDays,
-          streakDays: stats.consecutiveDays,
-          monthDays: stats.monthlyDays
+          totalDays: stats.totalDays || 0,
+          streakDays: stats.consecutiveDays || 0,
+          monthDays: stats.monthlyDays || 0
+        })
+      } else {
+        // 如果获取失败，设置为0
+        this.setData({
+          totalDays: 0,
+          streakDays: 0,
+          monthDays: 0
         })
       }
     } catch (error) {
       console.error('加载统计数据失败:', error)
+      this.setData({
+        totalDays: 0,
+        streakDays: 0,
+        monthDays: 0
+      })
     }
   },
 
   // 加载记录列表
   async loadRecords() {
     try {
+      // 检查用户登录状态
+      const app = getApp()
+      const userInfo = app.getValidUserInfo()
+      
+      if (!userInfo || !userInfo.nickName || userInfo.nickName === '未登录') {
+        console.log('History页面：用户未登录，跳过记录加载')
+        this.setData({ records: [] })
+        this.generateCalendar()
+        return
+      }
+
       const { currentYear, currentMonth } = this.data
       
-      // 获取当前月份的记录
+      // 获取当前月份的记录（只获取当前用户的记录）
       const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`
       const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-31`
       
@@ -85,6 +146,8 @@ Page({
       })
       
       if (result.success) {
+        // 注意：CloudApi.getCheckinRecords 应该已经在云函数中过滤了当前用户的记录
+        // 如果没有过滤，这里会显示所有用户的记录，这是需要修复的问题
         const allRecords = result.data
         
         // 格式化记录数据
@@ -254,5 +317,26 @@ Page({
     })
     this.loadRecords()
   },
+
+  // 页面级别的用户信息更新方法（由app.js调用）
+  updateUserInfo(userInfo) {
+    console.log('History页面：收到用户信息更新通知:', userInfo);
+    
+    if (userInfo === null) {
+      // 用户退出登录，清空数据
+      console.log('History页面：用户已退出登录，清空数据');
+      this.setData({
+        totalDays: 0,
+        streakDays: 0,
+        monthDays: 0,
+        records: []
+      });
+      this.generateCalendar(); // 重新生成空日历
+    } else if (userInfo && userInfo.nickName && userInfo.nickName !== '微信用户' && userInfo.nickName !== '未登录') {
+      // 用户登录，重新加载数据
+      console.log('History页面：用户已登录，重新加载数据');
+      this.loadData();
+    }
+  }
 
 })

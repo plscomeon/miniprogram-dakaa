@@ -181,10 +181,15 @@ Page({
   },
 
   // 微信一键登录 - 必须在用户点击事件中直接调用 getUserProfile
-  oneClickLogin() {
+  oneClickLogin(fromSubmit = false) {
     if (this.data.submitting) return;
     
-    console.log('Checkin页面：开始微信登录流程');
+    console.log('Checkin页面：开始微信登录流程', fromSubmit ? '(来自提交打卡)' : '');
+    
+    // 标记是否来自提交打卡
+    if (fromSubmit) {
+      this.pendingSubmit = true;
+    }
     
     this.setData({ submitting: true });
     wx.showLoading({ title: '登录中...' });
@@ -327,6 +332,14 @@ Page({
         icon: 'success',
         duration: 2000
       });
+
+      // 8. 登录成功后，如果是从提交打卡触发的登录，自动提交打卡
+      if (this.pendingSubmit) {
+        this.pendingSubmit = false;
+        setTimeout(() => {
+          this.submitCheckin();
+        }, 1000);
+      }
 
     } catch (error) {
       console.error('Checkin页面：登录失败:', error);
@@ -590,16 +603,17 @@ Page({
     
     // 首先检查登录状态
     if (!this.data.isLogin) {
-      console.log('用户未登录')
+      console.log('用户未登录，需要先获取授权')
       wx.showModal({
         title: '需要登录',
-        content: '请先登录后再提交打卡',
+        content: '提交打卡需要获取您的微信信息，是否授权登录？',
         showCancel: true,
         cancelText: '取消',
-        confirmText: '去登录',
+        confirmText: '授权登录',
         success: (res) => {
           if (res.confirm) {
-            this.showLoginModal();
+            // 直接调用登录流程，标记来自提交打卡
+            this.oneClickLogin(true);
           }
         }
       });
@@ -724,19 +738,18 @@ Page({
       content: '确定要退出登录吗？',
       success: (res) => {
         if (res.confirm) {
-          // 清除本地存储的用户信息
-          wx.removeStorageSync('userInfo');
-          
-          // 清除全局状态
+          // 使用app.js的统一清除方法
           const app = getApp();
-          app.globalData.isLoggedIn = false;
-          app.globalData.userInfo = null;
+          app.clearUserInfo();
           
           // 更新页面状态
           this.setData({
             isLogin: false,
             userInfo: {}
           });
+          
+          // 通知其他页面用户已退出登录
+          app.notifyPagesUserInfoUpdate(null);
           
           wx.showToast({
             title: '已退出登录',

@@ -42,15 +42,11 @@ Page({
     if (this.data.userInfo && this.data.userInfo.nickName && this.data.userInfo.nickName !== '未登录') {
       this.loadUserData();
     } else {
-      console.log('Profile页面：用户未登录，跳过数据加载');
-      // 设置默认数据
-      this.setData({
-        totalDays: 0,
-        streakDays: 0,
-        totalVideos: 0,
-        totalWords: 0
-      });
-      this.updateAchievements();
+      console.log('Profile页面：用户未登录，显示登录提示');
+      // 清空所有数据
+      this.clearAllData();
+      // 显示登录提示
+      this.showLoginPrompt();
     }
   },
 
@@ -142,6 +138,16 @@ Page({
         console.log('Profile页面：检测到用户登录，重新加载数据');
         this.loadUserData();
       }
+    } else if (userInfo === null) {
+      // 用户退出登录
+      console.log('Profile页面：用户已退出登录，清空数据');
+      this.setData({
+        userInfo: {
+          nickName: '未登录',
+          avatarUrl: '/images/default-avatar.png'
+        }
+      });
+      this.clearAllData();
     }
   },
 
@@ -738,6 +744,47 @@ Page({
     return {
       title: 'Learning Tracker - 坚持学习，每天进步',
       imageUrl: '/images/default-avatar.png'
+    }
+  },
+
+  // 清空所有数据
+  clearAllData() {
+    this.setData({
+      totalDays: 0,
+      streakDays: 0,
+      totalVideos: 0,
+      totalWords: 0,
+      totalMistakes: 0,
+      unlockedCount: 0
+    });
+    this.initAchievements(); // 重置成就
+  },
+
+  // 显示登录提示
+  showLoginPrompt() {
+    // 只在第一次显示时弹出提示，避免重复弹出
+    if (!this.loginPromptShown) {
+      this.loginPromptShown = true;
+      
+      setTimeout(() => {
+        wx.showModal({
+          title: '需要登录',
+          content: '查看个人信息需要先登录，是否前往登录？',
+          confirmText: '去登录',
+          cancelText: '取消',
+          success: (res) => {
+            if (res.confirm) {
+              wx.switchTab({
+                url: '/pages/checkin/checkin'
+              });
+            }
+          },
+          complete: () => {
+            // 重置标记，下次进入页面时可以再次显示
+            this.loginPromptShown = false;
+          }
+        });
+      }, 500); // 延迟显示，避免页面切换时的冲突
     }
   }
 })
