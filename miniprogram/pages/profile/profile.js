@@ -2,12 +2,17 @@
 const CloudApi = require('../../utils/cloudApi.js')
 
 Page({
+  goToMistakes: function () {
+    wx.navigateTo({ url: '/pages/mistakes/mistakes' });
+  },
+
   data: {
     userInfo: {},
     totalDays: 0,
     streakDays: 0,
     totalVideos: 0,
     totalWords: 0,
+    totalMistakes: 0,
     achievements: [],
     totalAchievements: 8,
     unlockedCount: 0,
@@ -20,65 +25,167 @@ Page({
   },
 
   onLoad() {
-    this.initPage()
+    console.log('Profile页面：onLoad');
+    this.initPage();
   },
 
-  onShow() {
-    this.loadUserData()
+  async onShow() {
+    console.log('Profile页面：onShow - 页面显示');
+    
+    // 调试信息：显示当前状态
+    this.debugCurrentState();
+    
+    // 每次页面显示时都重新获取用户信息
+    await this.getUserInfo();
+    
+    // 只有在用户已登录的情况下才加载数据
+    if (this.data.userInfo && this.data.userInfo.nickName && this.data.userInfo.nickName !== '未登录') {
+      this.loadUserData();
+    } else {
+      console.log('Profile页面：用户未登录，跳过数据加载');
+      // 设置默认数据
+      this.setData({
+        totalDays: 0,
+        streakDays: 0,
+        totalVideos: 0,
+        totalWords: 0
+      });
+      this.updateAchievements();
+    }
   },
 
   // 初始化页面
   initPage() {
-    this.getUserInfo()
-    this.loadSettings()
-    this.calculateCacheSize()
-    this.initAchievements()
+    console.log('Profile页面：初始化页面');
+    this.getUserInfo();
+    this.loadSettings();
+    this.calculateCacheSize();
+    this.initAchievements();
   },
 
-  // 获取用户信息
-  getUserInfo() {
+  // 获取用户信息 - 优先从全局状态和本地存储获取
+  async getUserInfo() {
+    console.log('Profile页面：开始获取用户信息');
+    
     try {
-      const userInfo = Storage.getUserInfo()
-      this.setData({ userInfo })
+      const app = getApp();
+      
+      // 1. 首先尝试从全局状态获取
+      let userInfo = app.globalData.userInfo;
+      console.log('Profile页面：全局状态用户信息:', userInfo);
+      
+      // 2. 如果全局状态没有，尝试从本地存储获取
+      if (!userInfo || !userInfo.nickName || userInfo.nickName === '微信用户') {
+        const localUserInfo = wx.getStorageSync('userInfo');
+        console.log('Profile页面：本地存储用户信息:', localUserInfo);
+        
+        if (localUserInfo && localUserInfo.nickName && localUserInfo.nickName !== '微信用户') {
+          userInfo = localUserInfo;
+          // 同步到全局状态
+          app.globalData.userInfo = userInfo;
+          app.globalData.isLoggedIn = true;
+        }
+      }
+      
+      // 3. 如果本地也没有，尝试从云端获取
+      if (!userInfo || !userInfo.nickName || userInfo.nickName === '微信用户') {
+        console.log('Profile页面：本地无有效用户信息，尝试从云端获取');
+        try {
+          const cloudResult = await CloudApi.getUserInfo();
+          console.log('Profile页面：云端获取用户信息结果:', cloudResult);
+          
+          if (cloudResult.success && cloudResult.data && cloudResult.data.nickName && cloudResult.data.nickName !== '微信用户') {
+            userInfo = cloudResult.data;
+            // 更新全局状态和本地存储
+            app.setUserInfo(userInfo);
+          }
+        } catch (cloudError) {
+          console.error('Profile页面：从云端获取用户信息失败:', cloudError);
+        }
+      }
+      
+      // 4. 设置用户信息到页面
+      if (userInfo && userInfo.nickName && userInfo.nickName !== '微信用户') {
+        console.log('Profile页面：设置有效用户信息:', userInfo);
+        this.setData({ userInfo });
+      } else {
+        console.log('Profile页面：没有有效用户信息，显示默认状态');
+        this.setData({
+          userInfo: {
+            nickName: '未登录',
+            avatarUrl: '/images/default-avatar.png'
+          }
+        });
+      }
+      
     } catch (error) {
-      console.error('获取用户信息失败:', error)
+      console.error('Profile页面：获取用户信息失败:', error);
       this.setData({
         userInfo: {
-          nickName: '学习者',
+          nickName: '未登录',
           avatarUrl: '/images/default-avatar.png'
         }
-      })
+      });
     }
   },
 
-  // 加载用户数据 - 使用云函数获取真实数据
+  // 页面级别的用户信息更新方法（由app.js调用）
+  updateUserInfo(userInfo) {
+    console.log('Profile页面：收到用户信息更新通知:', userInfo);
+    
+    if (userInfo && userInfo.nickName && userInfo.nickName !== '微信用户' && userInfo.nickName !== '未登录') {
+      this.setData({ userInfo: userInfo });
+      console.log('Profile页面：用户信息已更新到:', userInfo);
+      
+      // 如果之前显示的是未登录状态，现在有了用户信息，重新加载数据
+      if (this.data.totalDays === 0 && this.data.streakDays === 0) {
+        console.log('Profile页面：检测到用户登录，重新加载数据');
+        this.loadUserData();
+      }
+    }
+  },
+
+  // 调试方法：显示当前状态
+  debugCurrentState() {
+    const app = getApp();
+    const localUserInfo = wx.getStorageSync('userInfo');
+    
+    console.log('=== Profile页面状态调试 ===');
+    console.log('页面用户信息:', this.data.userInfo);
+    console.log('全局登录状态:', app.globalData.isLoggedIn);
+    console.log('全局用户信息:', app.globalData.userInfo);
+    console.log('本地存储用户信息:', localUserInfo);
+    console.log('=========================');
+  },
+
+  // 加载用户数据 - 只加载统计数据，不覆盖用户信息
   async loadUserData() {
     wx.showLoading({ title: '加载数据中...' })
     
     try {
-      // 获取用户信息
-      const userResult = await CloudApi.getUserInfo()
-      if (userResult.success && userResult.data) {
-        this.setData({ userInfo: userResult.data })
-      }
+      console.log('Profile页面：开始加载统计数据');
       
       // 获取统计数据
       const statsResult = await CloudApi.getStats()
       if (statsResult.success) {
         const stats = statsResult.data
+        console.log('Profile页面：获取统计数据成功:', stats);
         this.setData({
-          totalDays: stats.totalDays,
-          streakDays: stats.consecutiveDays,
-          totalVideos: stats.totalVideos,
-          totalWords: stats.totalDiaries + stats.totalQuestions
+          totalDays: stats.totalDays || 0,
+          streakDays: stats.consecutiveDays || 0,
+          totalVideos: stats.totalImages || 0,
+          totalWords: (stats.totalDiaries || 0) + (stats.totalQuestions || 0),
+          totalMistakes: stats.totalMistakeImages || 0
         })
       } else {
+        console.log('Profile页面：获取统计数据失败，使用默认值');
         // 没有数据时设置默认值
         this.setData({
           totalDays: 0,
           streakDays: 0,
           totalVideos: 0,
-          totalWords: 0
+          totalWords: 0,
+          totalMistakes: 0
         })
       }
       
@@ -86,8 +193,18 @@ Page({
       // 更新成就进度
       this.updateAchievements()
     } catch (error) {
-      console.error('加载用户数据失败:', error)
+      console.error('Profile页面：加载统计数据失败:', error)
       wx.hideLoading()
+      
+      // 设置默认值
+      this.setData({
+        totalDays: 0,
+        streakDays: 0,
+        totalVideos: 0,
+        totalWords: 0,
+        totalMistakes: 0
+      })
+      
       wx.showToast({
         title: '数据加载失败',
         icon: 'none'
@@ -356,8 +473,28 @@ Page({
     }
   },
 
-  // 更换头像
+  // 更换头像或登录
   changeAvatar() {
+    // 检查用户是否已登录
+    if (!this.data.userInfo || !this.data.userInfo.nickName || this.data.userInfo.nickName === '未登录') {
+      // 未登录，跳转到打卡页面进行登录
+      wx.showModal({
+        title: '需要登录',
+        content: '请先登录后再使用个人中心功能',
+        confirmText: '去登录',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({
+              url: '/pages/checkin/checkin'
+            });
+          }
+        }
+      });
+      return;
+    }
+
+    // 已登录，允许更换头像
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
@@ -397,11 +534,14 @@ Page({
         throw new Error('用户信息保存失败')
       }
       
+      // 更新页面状态
       this.setData({ userInfo })
       
-      // 更新全局用户信息
+      // 更新全局用户信息和本地存储
       const app = getApp()
       app.setUserInfo(userInfo)
+      
+      console.log('Profile页面：头像更新后的用户信息:', userInfo)
       
       wx.hideLoading()
       wx.showToast({
