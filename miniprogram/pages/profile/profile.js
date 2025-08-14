@@ -1,6 +1,6 @@
 // 个人中心页面逻辑
 const CloudApi = require('../../utils/cloudApi.js')
-const RewardSystem = require('./rewardSystem.js')
+const RewardSystemNew = require('./rewardSystemNew.js')
 
 Page({
   goToMistakes: function () {
@@ -35,9 +35,8 @@ Page({
   },
 
   onLoad() {
-    console.log('Profile页面：onLoad');
-    this.initRewardSystem();
-    this.initPage();
+    console.log('个人中心页面加载')
+    this.rewardSystem = new RewardSystemNew()
   },
 
   async onShow() {
@@ -56,6 +55,8 @@ Page({
         this.data.userInfo.nickName.trim() !== '') {
       console.log('Profile页面：用户已登录，加载数据');
       this.loadUserData();
+      // 初始化奖励系统
+      await this.initRewardSystem();
     } else {
       console.log('Profile页面：用户未登录，显示登录提示');
       // 清空所有数据
@@ -66,35 +67,49 @@ Page({
   },
 
   // 初始化奖励系统
-  initRewardSystem() {
-    this.rewardSystem = new RewardSystem();
-    this.rewardSystem.init();
-    this.updateRewardSystemData();
+  async initRewardSystem() {
+    try {
+      const result = await this.rewardSystem.init();
+      if (result.success) {
+        await this.updateRewardSystemData();
+      } else {
+        console.error('初始化奖励系统失败:', result.message);
+      }
+    } catch (error) {
+      console.error('初始化奖励系统异常:', error);
+    }
   },
 
   // 更新奖励系统数据到页面
-  updateRewardSystemData() {
-    // 同步用户统计数据到奖励系统
-    const syncResult = this.rewardSystem.syncWithUserStats(this.data.totalDays, this.data.streakDays);
-    
-    const status = this.rewardSystem.getCurrentStatus();
-    const rewardHistory = this.rewardSystem.getRewardHistory();
-    const penaltyHistory = this.rewardSystem.getPenaltyHistory();
-    
-    console.log('奖励系统同步结果:', syncResult);
-    console.log('当前状态:', status);
-    
-    this.setData({
-      phoneUsageRights: status.phoneUsageRights,
-      phoneRecoveryDays: status.phoneRecoveryDays,
-      isPhoneRecovered: status.isPhoneRecovered,
-      rewardHistory: rewardHistory.slice(0, 5), // 只显示最近5条
-      penaltyHistory: penaltyHistory.slice(0, 5),
-      formattedUsageRights: this.formatTime(status.phoneUsageRights),
-      statusColor: this.getStatusColor(status.isPhoneRecovered),
-      statusText: this.getStatusText(status.isPhoneRecovered, status.phoneRecoveryDays),
-      syncResult: syncResult // 用于调试显示
-    });
+  async updateRewardSystemData() {
+    try {
+      // 重新加载用户奖励数据
+      await this.rewardSystem.loadUserRewards();
+      
+      // 获取当前状态
+      const status = this.rewardSystem.getCurrentStatus();
+      
+      // 获取奖励和惩罚历史
+      const stats = await this.rewardSystem.getRewardStats();
+      
+      console.log('奖励系统当前状态:', status);
+      
+      this.setData({
+        phoneUsageRights: status.phoneUsageRights,
+        phoneRecoveryDays: status.phoneRecoveryDays,
+        isPhoneRecovered: status.isPhoneRecovered,
+        rewardHistory: stats.rewardHistory ? stats.rewardHistory.slice(0, 5) : [],
+        penaltyHistory: stats.penaltyHistory ? stats.penaltyHistory.slice(0, 5) : [],
+        formattedUsageRights: this.rewardSystem.formatTime(status.phoneUsageRights),
+        statusColor: this.getStatusColor(status.isPhoneRecovered),
+        statusText: this.getStatusText(status.isPhoneRecovered, status.phoneRecoveryDays),
+        totalEarned: status.totalEarned,
+        totalUsed: status.totalUsed,
+        totalPenalty: status.totalPenalty
+      });
+    } catch (error) {
+      console.error('更新奖励系统数据失败:', error);
+    }
   },
 
   // 初始化页面
@@ -268,7 +283,7 @@ Page({
       // 更新成就进度
       this.updateAchievements()
       // 更新奖励系统数据
-      this.updateRewardSystemData()
+      await this.updateRewardSystemData()
     } catch (error) {
       console.error('Profile页面：加载统计数据失败:', error)
       wx.hideLoading()
@@ -804,21 +819,37 @@ Page({
   },
 
   // 使用手机时间
-  usePhoneTime(e) {
+  async usePhoneTime(e) {
     const { minutes } = e.currentTarget.dataset;
-    const result = this.rewardSystem.usePhoneTime(minutes);
     
-    if (result.success) {
-      this.updateRewardSystemData();
-      wx.showToast({
-        title: result.message,
-        icon: 'success',
-        duration: 3000
-      });
-    } else {
+    wx.showLoading({ title: '处理中...' });
+    
+    try {
+      const result = await this.rewardSystem.usePhoneTime(minutes);
+      
+      wx.hideLoading();
+      
+      if (result.success) {
+        await this.updateRewardSystemData();
+        wx.showToast({
+          title: result.message,
+          icon: 'success',
+          duration: 3000
+        });
+      } else {
+        wx.showModal({
+          title: '无法使用',
+          content: result.message,
+          showCancel: false,
+          confirmText: '知道了'
+        });
+      }
+    } catch (error) {
+      wx.hideLoading();
+      console.error('使用手机时间失败:', error);
       wx.showModal({
-        title: '无法使用',
-        content: result.message,
+        title: '操作失败',
+        content: '网络异常，请稍后重试',
         showCancel: false,
         confirmText: '知道了'
       });

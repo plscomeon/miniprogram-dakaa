@@ -259,6 +259,100 @@ class CloudApi {
       return { success: false, message: error.message }
     }
   }
+
+  // 奖励系统相关API
+  static async getUserRewards() {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'rewardManager',
+        data: {
+          action: 'getUserRewards'
+        }
+      })
+      return result.result
+    } catch (error) {
+      console.error('获取用户奖励信息失败:', error)
+      return { success: false, message: error.message }
+    }
+  }
+
+  static async addCheckinReward(rewardData) {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'rewardManager',
+        data: {
+          action: 'addCheckinReward',
+          data: rewardData
+        }
+      })
+      return result.result
+    } catch (error) {
+      console.error('添加打卡奖励失败:', error)
+      return { success: false, message: error.message }
+    }
+  }
+
+  static async usePhoneTime(minutes) {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'rewardManager',
+        data: {
+          action: 'usePhoneTime',
+          data: { minutes }
+        }
+      })
+      return result.result
+    } catch (error) {
+      console.error('使用手机时间失败:', error)
+      return { success: false, message: error.message }
+    }
+  }
+
+  static async applyPenalty(penaltyData) {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'rewardManager',
+        data: {
+          action: 'applyPenalty',
+          data: penaltyData
+        }
+      })
+      return result.result
+    } catch (error) {
+      console.error('应用惩罚失败:', error)
+      return { success: false, message: error.message }
+    }
+  }
+
+  static async getRewardStats() {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'rewardManager',
+        data: {
+          action: 'getRewardStats'
+        }
+      })
+      return result.result
+    } catch (error) {
+      console.error('获取奖励统计失败:', error)
+      return { success: false, message: error.message }
+    }
+  }
+
+  static async getUsageHistory() {
+    try {
+      const result = await wx.cloud.callFunction({
+        name: 'rewardManager',
+        data: {
+          action: 'getUsageHistory'
+        }
+      })
+      return result.result
+    } catch (error) {
+      console.error('获取使用历史失败:', error)
+      return { success: false, message: error.message }
+    }
+  }
 }
 
 module.exports = CloudApi
